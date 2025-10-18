@@ -1,21 +1,16 @@
-import { Header } from "@/components/admin/Header";
-import { Sidebar } from "@/components/admin/Sidebar";
+import type { ReactNode } from "react";
+import ConditionalLayout from "@/components/layouts/ConditionalLayout";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="min-h-screen grid grid-cols-[240px,1fr]" style={{ gridTemplateColumns: "240px 1fr" }}>
-            <Sidebar />
-            <div className="min-h-screen flex flex-col">
-                {/* Header is an async Server Component */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {/* @ts-ignore Async Server Component */}
-                <Header />
-                <main className="p-4 sm:p-6 bg-[var(--background)] flex-1">
-                    {children}
-                </main>
-            </div>
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return (
+    <ConditionalLayout>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-x-auto">
+        <div className="w-full max-w-7xl mx-auto">
+          {children}
         </div>
-    );
+      </div>
+    </ConditionalLayout>
+  );
 }
 
 

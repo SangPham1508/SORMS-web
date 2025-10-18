@@ -1,0 +1,338 @@
+---
+alwaysApply: true
+---
+Next.js Frontend Development Rules
+1. Folder Structure and File Naming Conventions
+
+Folder Structure:
+
+Place components and hooks in src/components, src/hooks, src/pages, etc., and avoid keeping all code in one large file.
+
+Use lowercase with dash-separated names for component folders (e.g., components/auth-wizard).
+
+Organize files by feature rather than file type. For example:
+
+src/
+  components/
+    auth-wizard/
+      AuthWizard.tsx
+      AuthWizard.module.css
+    button/
+      Button.tsx
+      Button.module.css
+  hooks/
+    useAuth.ts
+    useForm.ts
+  pages/
+    login.tsx
+    dashboard.tsx
+
+
+File Naming:
+
+Components: Use PascalCase (e.g., AuthWizard.tsx, Button.tsx).
+
+Hooks: Use camelCase with the use prefix (e.g., useAuth.ts, useForm.ts).
+
+CSS Modules: Use kebab-case for module names (e.g., auth-wizard.module.css).
+
+Types: Use .type.ts (e.g., button.type.ts).
+
+Testing: Use .test.tsx for test files (e.g., Button.test.tsx).
+
+2. Code Style and Syntax
+
+Indentation: Use 2 spaces for indentation (aligning with Next.js and JavaScript conventions).
+
+Semicolons: Omit semicolons unless necessary for clarity.
+
+String Literals: Use single quotes for strings (unless escaping is required).
+
+Equality: Always use strict equality (===) instead of loose equality (==).
+
+Braces: Use braces for multi-line if and else blocks.
+
+Boolean Props: Always use boolean attributes like checked, disabled directly (<button disabled>).
+
+3. React Best Practices
+
+Functional Components: Prefer functional components and React hooks. Avoid using class components.
+
+Prop-Types: Use TypeScript interfaces for component props and state.
+
+Component Design:
+
+Break components down into smaller, reusable parts.
+
+Use composition for complex components (e.g., <Button> and <IconButton>).
+
+Extract complex logic into custom hooks.
+
+For dynamic imports, use next/dynamic for non-essential components.
+
+4. TypeScript Practices
+
+Interface for Object Shapes: Use interface to define object shapes (e.g., User interface).
+
+Avoid any: Avoid using the any type. Use clear, precise types instead.
+
+Type Inference: Let TypeScript infer types where possible to avoid redundant type annotations.
+
+Type Guards: Use type guards to handle null or undefined values explicitly.
+
+Generics: Use generics for flexible functions and components (e.g., T as a generic parameter).
+
+5. State Management and Data Fetching
+
+Local State: Use useState and useReducer for managing component-level state.
+
+Global State: Use Zustand for global state management or React Context for intermediate state sharing.
+
+Server-Side Fetching: Prefer React Server Components (RSC) and Next.js API Routes for server-side data fetching to reduce reliance on client-side state management.
+
+Data Fetching with React Query: Use TanStack React Query for fetching, caching, and synchronizing data.
+
+Lazy Loading: Use dynamic imports for non-essential components to optimize performance.
+
+6. UI and Styling
+
+TailwindCSS:
+
+Use utility-first with TailwindCSS for layout and styling.
+
+Use CSS Modules (CSS specific to components) when necessary.
+
+Always ensure responsive design with Tailwind's breakpoints (sm, md, lg, xl, etc.).
+
+Shadcn UI and Radix UI: Use Shadcn UI for building consistent, accessible UI components and Radix UI for customizable components with strong accessibility support.
+
+Design Consistency:
+
+Follow a consistent spacing system (using Tailwind's spacing classes, e.g., p-4, m-2).
+
+Use colors defined in Tailwind configuration.
+
+Utilize CSS Grid and Flexbox for layouts, preferring Tailwind utility classes.
+
+7. Error Handling and Validation
+
+Error Boundaries: Implement Error Boundaries to gracefully handle unexpected errors.
+
+Error Logging: Always log errors to a monitoring service like Sentry.
+
+Validation with Zod: Use Zod for schema validation on both client and server.
+
+Form Validation: Use React Hook Form for form state management and validation, with Zod as a validation schema.
+
+Error Handling: Always handle errors and edge cases at the beginning of functions using early returns.
+
+8. Performance Optimization
+
+Code Splitting:
+
+Use dynamic imports to split code for non-critical components.
+
+Implement lazy loading for images and large assets.
+
+Server-Side Rendering (SSR): Use SSR in Next.js for pages that require SEO and performance.
+
+Image Optimization: Use Next.js's Image component for image optimization.
+
+Caching: Implement caching strategies (e.g., getStaticProps for static content).
+
+9. Security
+
+Authentication: Use NextAuth.js for secure authentication and JWT tokens for session management.
+
+Sanitize Input: Sanitize all user inputs to prevent XSS (cross-site scripting) attacks. Use DOMPurify if necessary.
+
+Rate Limiting: Implement rate limiting to prevent brute force attacks, especially for APIs.
+
+HTTPS: Always use HTTPS for secure communication.
+
+10. Accessibility
+
+Semantic HTML: Use semantic HTML elements (<button>, <input>, <label>, etc.).
+
+ARIA: Add ARIA attributes where necessary to improve screen reader support (e.g., aria-label, aria-hidden, role).
+
+Keyboard Navigation: Ensure all interactive elements are keyboard-navigable (tabindex, onKeyDown, etc.).
+
+11. Testing
+
+Unit Testing: Write unit tests using Jest and React Testing Library for components and hooks.
+
+Integration Testing: Implement integration tests for pages and API routes.
+
+End-to-End Testing: Use Cypress or Playwright for E2E testing for critical user workflows.
+
+Conclusion
+
+By following these rules, you ensure that Next.js frontend development is done in a consistent, efficient, and secure manner. Adhering to these best practices will help maintain a clean, high-quality codebase that aligns with modern web standards. The result is a reliable, performant application that is easy to maintain and extend.Next.js Frontend Development Rules
+1. Folder Structure and File Naming Conventions
+
+Folder Structure:
+
+Place components and hooks in src/components, src/hooks, src/pages, etc., and avoid keeping all code in one large file.
+
+Use lowercase with dash-separated names for component folders (e.g., components/auth-wizard).
+
+Organize files by feature rather than file type. For example:
+
+src/
+  components/
+    auth-wizard/
+      AuthWizard.tsx
+      AuthWizard.module.css
+    button/
+      Button.tsx
+      Button.module.css
+  hooks/
+    useAuth.ts
+    useForm.ts
+  pages/
+    login.tsx
+    dashboard.tsx
+
+
+File Naming:
+
+Components: Use PascalCase (e.g., AuthWizard.tsx, Button.tsx).
+
+Hooks: Use camelCase with the use prefix (e.g., useAuth.ts, useForm.ts).
+
+CSS Modules: Use kebab-case for module names (e.g., auth-wizard.module.css).
+
+Types: Use .type.ts (e.g., button.type.ts).
+
+Testing: Use .test.tsx for test files (e.g., Button.test.tsx).
+
+2. Code Style and Syntax
+
+Indentation: Use 2 spaces for indentation (aligning with Next.js and JavaScript conventions).
+
+Semicolons: Omit semicolons unless necessary for clarity.
+
+String Literals: Use single quotes for strings (unless escaping is required).
+
+Equality: Always use strict equality (===) instead of loose equality (==).
+
+Braces: Use braces for multi-line if and else blocks.
+
+Boolean Props: Always use boolean attributes like checked, disabled directly (<button disabled>).
+
+3. React Best Practices
+
+Functional Components: Prefer functional components and React hooks. Avoid using class components.
+
+Prop-Types: Use TypeScript interfaces for component props and state.
+
+Component Design:
+
+Break components down into smaller, reusable parts.
+
+Use composition for complex components (e.g., <Button> and <IconButton>).
+
+Extract complex logic into custom hooks.
+
+For dynamic imports, use next/dynamic for non-essential components.
+
+4. TypeScript Practices
+
+Interface for Object Shapes: Use interface to define object shapes (e.g., User interface).
+
+Avoid any: Avoid using the any type. Use clear, precise types instead.
+
+Type Inference: Let TypeScript infer types where possible to avoid redundant type annotations.
+
+Type Guards: Use type guards to handle null or undefined values explicitly.
+
+Generics: Use generics for flexible functions and components (e.g., T as a generic parameter).
+
+5. State Management and Data Fetching
+
+Local State: Use useState and useReducer for managing component-level state.
+
+Global State: Use Zustand for global state management or React Context for intermediate state sharing.
+
+Server-Side Fetching: Prefer React Server Components (RSC) and Next.js API Routes for server-side data fetching to reduce reliance on client-side state management.
+
+Data Fetching with React Query: Use TanStack React Query for fetching, caching, and synchronizing data.
+
+Lazy Loading: Use dynamic imports for non-essential components to optimize performance.
+
+6. UI and Styling
+
+TailwindCSS:
+
+Use utility-first with TailwindCSS for layout and styling.
+
+Use CSS Modules (CSS specific to components) when necessary.
+
+Always ensure responsive design with Tailwind's breakpoints (sm, md, lg, xl, etc.).
+
+Shadcn UI and Radix UI: Use Shadcn UI for building consistent, accessible UI components and Radix UI for customizable components with strong accessibility support.
+
+Design Consistency:
+
+Follow a consistent spacing system (using Tailwind's spacing classes, e.g., p-4, m-2).
+
+Use colors defined in Tailwind configuration.
+
+Utilize CSS Grid and Flexbox for layouts, preferring Tailwind utility classes.
+
+7. Error Handling and Validation
+
+Error Boundaries: Implement Error Boundaries to gracefully handle unexpected errors.
+
+Error Logging: Always log errors to a monitoring service like Sentry.
+
+Validation with Zod: Use Zod for schema validation on both client and server.
+
+Form Validation: Use React Hook Form for form state management and validation, with Zod as a validation schema.
+
+Error Handling: Always handle errors and edge cases at the beginning of functions using early returns.
+
+8. Performance Optimization
+
+Code Splitting:
+
+Use dynamic imports to split code for non-critical components.
+
+Implement lazy loading for images and large assets.
+
+Server-Side Rendering (SSR): Use SSR in Next.js for pages that require SEO and performance.
+
+Image Optimization: Use Next.js's Image component for image optimization.
+
+Caching: Implement caching strategies (e.g., getStaticProps for static content).
+
+9. Security
+
+Authentication: Use NextAuth.js for secure authentication and JWT tokens for session management.
+
+Sanitize Input: Sanitize all user inputs to prevent XSS (cross-site scripting) attacks. Use DOMPurify if necessary.
+
+Rate Limiting: Implement rate limiting to prevent brute force attacks, especially for APIs.
+
+HTTPS: Always use HTTPS for secure communication.
+
+10. Accessibility
+
+Semantic HTML: Use semantic HTML elements (<button>, <input>, <label>, etc.).
+
+ARIA: Add ARIA attributes where necessary to improve screen reader support (e.g., aria-label, aria-hidden, role).
+
+Keyboard Navigation: Ensure all interactive elements are keyboard-navigable (tabindex, onKeyDown, etc.).
+
+11. Testing
+
+Unit Testing: Write unit tests using Jest and React Testing Library for components and hooks.
+
+Integration Testing: Implement integration tests for pages and API routes.
+
+End-to-End Testing: Use Cypress or Playwright for E2E testing for critical user workflows.
+
+Conclusion
+
+By following these rules, you ensure that Next.js frontend development is done in a consistent, efficient, and secure manner. Adhering to these best practices will help maintain a clean, high-quality codebase that aligns with modern web standards. The result is a reliable, performant application that is easy to maintain and extend.

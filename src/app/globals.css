@@ -1,69 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  /* Brand palette */
-  --background: #F8F9FA; /* main bg */
-  --foreground: #1F2937; /* primary text */
-  --muted: #6B7280; /* secondary text */
-  --card: #FFFFFF; /* surfaces */
-  --accent: #F97316; /* primary accent */
-  --accent-weak: #FB923C; /* subtle accent */
-  --danger: #EF4444; /* error */
-
-  /* Derived tokens */
-  --ring: var(--accent);
-  --border: #E5E7EB;
-  --badge-processing-bg: #FFEFE6;
-  --badge-processing-fg: #F97316;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Giữ giao diện sáng ngay cả khi hệ thống ở chế độ Dark */
-    --background: #F8F9FA;
-    --foreground: #1F2937;
-    --muted: #6B7280;
-    --card: #FFFFFF;
-    --border: #E5E7EB;
-  }
+html, body, #__next {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply antialiased text-gray-900 bg-gray-50;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
-/* Accent links and actions */
-.link-accent { color: var(--accent); }
-.btn-primary { background: var(--accent); color: white; }
-.btn-primary:hover { filter: brightness(0.95); }
-.btn-danger { color: var(--danger); }
-
-/* Inputs focus */
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 30%, transparent);
-  border-color: var(--accent);
+a {
+  @apply text-gray-700 hover:text-gray-900 no-underline hover:underline underline-offset-2;
 }
 
-/* Cards */
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-.card-header { color: var(--muted); font-weight: 600; }
-.kpi { color: var(--accent); font-weight: 700; font-size: 1.75rem; }
+button {
+  @apply inline-flex items-center justify-center rounded-md px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed;
+}
 
-/* Table */
-.table th { text-transform: uppercase; letter-spacing: .04em; color: var(--foreground); font-weight: 600; }
-.table a { color: var(--accent); }
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+}
 
-/* Badges */
-.badge-processing { background: var(--badge-processing-bg); color: var(--badge-processing-fg); }
-.badge-done { background: #DCFCE7; color: #166534; }
-.badge-cancelled { background: #F3F4F6; color: #6B7280; }
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container {
+    @apply px-6;
+  }
+}
+
+@media (min-width: 1025px) {
+  .container {
+    @apply px-8;
+  }
+}
+
+/* Utility Classes cho màu sắc trạng thái */
+.trang-thai-thanh-cong {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.trang-thai-canh-bao {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+}
+
+.trang-thai-loi {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.trang-thai-thong-tin {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+.trang-thai-cho-xu-ly {
+  @apply bg-orange-100 text-orange-800 border-orange-200;
+}
+
+.trang-thai-hoan-thanh {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.trang-thai-huy-bo {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.trang-thai-dang-thuc-hien {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+.trang-thai-co-san {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.trang-thai-da-thue {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.trang-thai-bao-tri {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+}
+
+.trang-thai-da-dat {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+.trang-thai-da-thanh-toan {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.trang-thai-chua-thanh-toan {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.trang-thai-xac-nhan {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.trang-thai-cho-xac-nhan {
+  @apply bg-orange-100 text-orange-800 border-orange-200;
+}
+
+
