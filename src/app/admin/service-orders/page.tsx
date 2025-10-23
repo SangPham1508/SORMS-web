@@ -7,9 +7,23 @@ import Badge from "@/components/ui/Badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Modal from "@/components/ui/Modal";
 
-import { mockServiceOrders, mockServices, type ServiceOrder, type Service } from '@/lib/mock-data'
+import { type Service } from '@/lib/types'
+import { useServices } from '@/hooks/useApi'
 
 type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+
+// Demo interface for service orders (not implemented in API yet)
+type DemoServiceOrder = {
+  id: number
+  code: string
+  customer_name: string
+  room_code?: string
+  created_at: string
+  total_amount: number
+  status: OrderStatus
+  note?: string
+  items: ServiceOrderItem[]
+}
 
 type ServiceOrderItem = {
   id: number
@@ -19,7 +33,9 @@ type ServiceOrderItem = {
 }
 
 export default function ServiceOrdersPage() {
-  const [rows, setRows] = useState<ServiceOrder[]>(mockServiceOrders)
+  const [rows, setRows] = useState<DemoServiceOrder[]>([])
+  const { data: servicesData } = useServices()
+  const [services, setServices] = useState<Service[]>([])
   const [flash, setFlash] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const [query, setQuery] = useState("")
@@ -30,13 +46,18 @@ export default function ServiceOrdersPage() {
   const [size, setSize] = useState(10)
 
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selected, setSelected] = useState<ServiceOrder | null>(null)
+  const [selected, setSelected] = useState<DemoServiceOrder | null>(null)
 
   const [editOpen, setEditOpen] = useState(false)
   const [edit, setEdit] = useState<{ id?: number, code: string, customer_name: string, room_code: string, created_at: string, total_price: string, status: OrderStatus, note: string, items: ServiceOrderItem[], item_service_id: string, item_name: string, item_qty: string, item_price: string }>({ code: '', customer_name: '', room_code: '', created_at: '', total_price: '', status: 'PENDING', note: '', items: [], item_service_id: '', item_name: '', item_qty: '', item_price: '' })
   const [confirmOpen, setConfirmOpen] = useState<{ open: boolean, id?: number } >({ open: false })
 
   useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 3000); return () => clearTimeout(t) }, [flash])
+
+  // Sync with hooks data
+  useEffect(() => {
+    if (servicesData) setServices(servicesData as Service[])
+  }, [servicesData])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -56,7 +77,7 @@ export default function ServiceOrdersPage() {
     setEdit({ code: '', customer_name: '', room_code: '', created_at: '', total_price: '', status: 'PENDING', note: '', items: [], item_service_id: '', item_name: '', item_qty: '', item_price: '' })
     setEditOpen(true)
   }
-  function openEditRow(r: ServiceOrder) {
+  function openEditRow(r: DemoServiceOrder) {
     setEdit({ id: r.id, code: r.code, customer_name: r.customer_name, room_code: r.room_code || '', created_at: r.created_at.slice(0,16), total_price: String(r.total_amount), status: r.status, note: r.note || '', items: r.items ? [...r.items] : [], item_service_id: '', item_name: '', item_qty: '', item_price: '' })
     setEditOpen(true)
   }
@@ -67,8 +88,8 @@ export default function ServiceOrdersPage() {
 
   function handlePickService(id: string) {
     setEdit(e => {
-      const picked = mockServices.find(s => String(s.id) === id)
-      return { ...e, item_service_id: id, item_name: picked ? picked.name : '', item_price: picked ? String(picked.unit_price) : e.item_price }
+      const picked = services.find(s => String(s.id) === id)
+      return { ...e, item_service_id: id, item_name: picked ? picked.name : '', item_price: picked ? String(picked.unitPrice) : e.item_price }
     })
   }
 
@@ -88,29 +109,23 @@ export default function ServiceOrdersPage() {
     setEdit(e => ({ ...e, items, total_price: String(computeTotal(items)) }))
   }
 
-  function save() {
+  async function save() {
     if (!edit.code.trim() || !edit.customer_name.trim() || !edit.created_at) {
       setFlash({ type: 'error', text: 'Vui lòng nhập Code, Khách, Ngày tạo.' })
       return
     }
-    const finalTotal = edit.items.length ? computeTotal(edit.items) : (edit.total_price && !isNaN(Number(edit.total_price)) ? Number(edit.total_price) : 0)
-    const payload: ServiceOrder = {
-      id: edit.id ?? (rows.length ? Math.max(...rows.map(r => r.id)) + 1 : 1),
-      code: edit.code.trim(),
-      customer_name: edit.customer_name.trim(),
-      room_code: edit.room_code.trim() || undefined,
-      created_at: edit.created_at,
-      total_amount: finalTotal,
-      status: edit.status,
-      note: edit.note.trim() || undefined,
-      items: edit.items,
-    }
-    if (edit.id) { setRows(rs => rs.map(r => r.id === edit.id ? payload : r)); setFlash({ type: 'success', text: 'Đã cập nhật phiếu dịch vụ.' }) }
-    else { setRows(rs => [...rs, payload]); setFlash({ type: 'success', text: 'Đã tạo phiếu dịch vụ mới.' }) }
+    
+    // Service orders API is not implemented yet
+    setFlash({ type: 'error', text: 'API phiếu dịch vụ chưa được triển khai. Vui lòng thử lại sau.' })
     setEditOpen(false)
   }
   function confirmDelete(id: number) { setConfirmOpen({ open: true, id }) }
-  function doDelete() { if (!confirmOpen.id) return; setRows(rs => rs.filter(r => r.id !== confirmOpen.id)); setConfirmOpen({ open: false }); setFlash({ type: 'success', text: 'Đã xóa phiếu dịch vụ.' }) }
+  async function doDelete() { 
+    if (!confirmOpen.id) return
+    // Service orders API is not implemented yet
+    setFlash({ type: 'error', text: 'API phiếu dịch vụ chưa được triển khai. Vui lòng thử lại sau.' })
+    setConfirmOpen({ open: false })
+  }
 
   function renderStatusChip(s: OrderStatus) {
     if (s === 'COMPLETED') return <Badge tone="success">COMPLETED</Badge>
@@ -130,7 +145,7 @@ export default function ServiceOrdersPage() {
       r.total_amount,
       r.status,
       `"${(r.note||'').replace(/"/g,'""')}"`,
-      `"${(r.items||[]).map(i=>i.service_name).join('; ').replace(/"/g,'""')}"`
+      `"${(r.items||[]).map((i: ServiceOrderItem)=>i.service_name).join('; ').replace(/"/g,'""')}"`
     ].join(','))].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -141,8 +156,8 @@ export default function ServiceOrdersPage() {
     URL.revokeObjectURL(url)
   }
 
-  function exportSinglePdf(order: ServiceOrder) {
-    const itemsRows = (order.items||[]).map(i => `<tr><td>${i.service_name}</td><td style=\"text-align:center\">${i.quantity}</td><td style=\"text-align:right\">${i.unit_price === 0 ? 'Miễn phí' : i.unit_price.toLocaleString('vi-VN') + ' ₫'}</td><td style=\"text-align:right\">${i.unit_price === 0 ? 'Miễn phí' : (i.quantity*i.unit_price).toLocaleString('vi-VN') + ' ₫'}</td></tr>`).join('')
+  function exportSinglePdf(order: DemoServiceOrder) {
+    const itemsRows = (order.items||[]).map((i: ServiceOrderItem) => `<tr><td>${i.service_name}</td><td style=\"text-align:center\">${i.quantity}</td><td style=\"text-align:right\">${i.unit_price === 0 ? 'Miễn phí' : i.unit_price.toLocaleString('vi-VN') + ' ₫'}</td><td style=\"text-align:right\">${i.unit_price === 0 ? 'Miễn phí' : (i.quantity*i.unit_price).toLocaleString('vi-VN') + ' ₫'}</td></tr>`).join('')
     const html = `<!doctype html>
 <html lang="vi">
 <head>
@@ -221,6 +236,12 @@ export default function ServiceOrdersPage() {
             {flash.text}
           </div>
         )}
+
+        {/* API Not Implemented Notice */}
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+          <div className="font-medium">API chưa được triển khai</div>
+          <div className="mt-1">Tính năng quản lý phiếu dịch vụ đang được phát triển. Hiện tại chỉ có thể xem giao diện demo.</div>
+        </div>
 
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -478,9 +499,9 @@ export default function ServiceOrdersPage() {
             <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr_auto] gap-2 items-center">
               <select className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm" value={edit.item_service_id} onChange={(e) => handlePickService(e.target.value)}>
                 <option value="">Chọn dịch vụ...</option>
-                {mockServices.map(s => (
+                {services.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.name} — {s.unit_price === 0 ? 'Miễn phí' : `${s.unit_price.toLocaleString('vi-VN')} ₫`}/{s.unit_name}
+                    {s.name} — {s.unitPrice === 0 ? 'Miễn phí' : `${s.unitPrice.toLocaleString('vi-VN')} ₫`}/{s.unitName}
                   </option>
                 ))}
               </select>

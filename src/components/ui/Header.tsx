@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Button from "./Button";
 import Input from "./Input";
+import { getNotificationsByRole, markAsRead, markAllAsRead, type Notification } from "@/lib/notifications";
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -14,55 +15,20 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  // Removed SidebarContext dependency - sidebar now manages its own state
-  const [notifications, setNotifications] = useState([
-    { 
-      id: 1, 
-      title: "Đặt phòng mới", 
-      message: "Có 3 đặt phòng mới cần xử lý ngay. Khách hàng Nguyễn Văn A đặt phòng A101 từ 20/01/2025 đến 22/01/2025. Khách hàng Trần Thị B đặt phòng B201 từ 18/01/2025 đến 20/01/2025. Khách hàng Lê Văn C đặt phòng C301 từ 17/01/2025 đến 19/01/2025.", 
-      time: "5 phút trước", 
-      unread: true 
-    },
-    { 
-      id: 2, 
-      title: "Thanh toán thành công", 
-      message: "Thanh toán phòng 101 đã hoàn tất thành công. Khách hàng Nguyễn Văn A đã thanh toán số tiền 1,500,000 VND bằng phương thức chuyển khoản. Giao dịch được thực hiện lúc 14:30 ngày 18/01/2025. Mã giao dịch: TXN-20250118-001.", 
-      time: "1 giờ trước", 
-      unread: true 
-    },
-    { 
-      id: 3, 
-      title: "Check-in hoàn tất", 
-      message: "Khách đã check-in phòng 205 thành công. Khách hàng Phạm Thị D đã hoàn tất thủ tục check-in lúc 15:45 ngày 18/01/2025. Phòng đã được chuẩn bị sẵn sàng với đầy đủ tiện nghi. Nhân viên phụ trách: Nguyễn Văn E.", 
-      time: "2 giờ trước", 
-      unread: false 
-    },
-    { 
-      id: 4, 
-      title: "Bảo trì hệ thống", 
-      message: "Hệ thống quản lý khách sạn sẽ được bảo trì từ 02:00 đến 04:00 ngày 19/01/2025. Trong thời gian này, một số tính năng có thể bị gián đoạn. Vui lòng lưu lại công việc trước khi hệ thống bảo trì. Cảm ơn sự hợp tác của bạn.", 
-      time: "3 giờ trước", 
-      unread: true 
-    },
-    { 
-      id: 5, 
-      title: "Cập nhật chính sách", 
-      message: "Chính sách đặt phòng và hủy phòng đã được cập nhật. Các thay đổi chính: Hủy phòng miễn phí trước 24h, phí hủy 50% trong vòng 12h, không hoàn tiền trong vòng 6h. Chính sách mới có hiệu lực từ ngày 20/01/2025.", 
-      time: "1 ngày trước", 
-      unread: false 
-    },
-  ]);
+  // Use real notification system
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const pathname = usePathname();
   const router = useRouter();
 
   const isAdmin = pathname.startsWith('/admin');
   const isOffice = pathname.startsWith('/office');
-  const isLecturer = pathname.startsWith('/lecturer');
+  const isLecturer = false; // merged into /user
   const isStaff = pathname.startsWith('/staff');
-  const isGuest = pathname.startsWith('/guest');
+  const isGuest = false; // merged into /user
   
   // Check if user is logged in (on protected pages)
-  const isLoggedIn = isAdmin || isOffice || isLecturer || isStaff || isGuest;
+  const isUser = pathname.startsWith('/user');
+  const isLoggedIn = isAdmin || isOffice || isStaff || isUser;
 
   // Auto-detect user role based on path and localStorage
   const [detectedUser, setDetectedUser] = useState<{
@@ -70,6 +36,34 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     email: string;
     role: string;
   } | null>(null);
+
+  // Load notifications and listen for updates
+  useEffect(() => {
+    const getUserRole = () => {
+      if (typeof window !== 'undefined') {
+        return sessionStorage.getItem('userRole') || 'user';
+      }
+      return 'user';
+    };
+    
+    const userRole = getUserRole() as 'admin' | 'office' | 'staff' | 'user';
+    setNotifications(getNotificationsByRole(userRole));
+
+    // Listen for notification updates
+    const handleNotificationUpdate = (event: CustomEvent) => {
+      setNotifications(getNotificationsByRole(userRole));
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('notificationsUpdated', handleNotificationUpdate as EventListener);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('notificationsUpdated', handleNotificationUpdate as EventListener);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -168,15 +162,16 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   // Mark notification as read and navigate to notifications page
   const handleNotificationClick = (id: number) => {
-    // Mark as read
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, unread: false } : notif
-      )
-    );
-    
+    // Mark as read using the notification system
+    markAsRead(id);
+
     // Close notification dropdown
     setNotificationMenuOpen(false);
+    
+    // Store current page as previous page
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('previousPage', window.location.pathname);
+    }
     
     // Navigate to notifications page
     router.push('/notifications');
@@ -202,7 +197,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
             {/* Logo */}
             <Link
-              href={isAdmin ? "/admin" : isOffice ? "/office" : isLecturer ? "/lecturer" : isStaff ? "/staff" : isGuest ? "/guest" : "/"}
+              href={isAdmin ? "/admin/dashboard" : isOffice ? "/office/dashboard" : isStaff ? "/staff/dashboard" : isUser ? "/user/dashboard" : "/"}
               className="flex items-center space-x-2 sm:space-x-3 ml-3 sm:ml-6"
             >
               <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-900 rounded-md flex items-center justify-center">
@@ -289,6 +284,10 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       className="w-full text-center text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                       onClick={() => {
                         setNotificationMenuOpen(false);
+                        // Store current page as previous page
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.setItem('previousPage', window.location.pathname);
+                        }
                         router.push('/notifications');
                       }}
                     >
@@ -344,7 +343,13 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
                       {/* Menu Items */}
                       <div className="py-1">
-                      <Button variant="ghost" className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 justify-start">
+                      <Button variant="ghost" className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 justify-start" onClick={() => {
+                        // Store current page before navigating to profile
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.setItem('previousPage', window.location.pathname);
+                        }
+                        window.location.href = '/profile';
+                      }}>
                         <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>

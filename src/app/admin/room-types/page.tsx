@@ -5,26 +5,15 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Modal from "@/components/ui/Modal";
-
-type RoomType = {
-  id: number
-  code: string
-  name: string
-  description?: string
-  base_price: number
-  capacity: number
-}
-
-const mock: RoomType[] = [
-  { id: 1, code: "STD", name: "Standard", description: "Phòng tiêu chuẩn", base_price: 350000, capacity: 2 },
-  { id: 2, code: "DLX", name: "Deluxe", description: "Phòng cao cấp", base_price: 550000, capacity: 3 },
-  { id: 3, code: "FAM", name: "Family", description: "Phòng gia đình", base_price: 750000, capacity: 4 },
-]
+import { type RoomType } from "@/lib/types";
+import { useRoomTypes } from '@/hooks/useApi'
+import { apiClient } from '@/lib/api-client'
 
 export default function RoomTypesPage() {
-  const [rows, setRows] = useState<RoomType[]>(mock)
+  const [rows, setRows] = useState<RoomType[]>([])
+  const { data: roomTypesData, refetch: refetchRoomTypes } = useRoomTypes()
   const [query, setQuery] = useState("")
-  const [sortKey, setSortKey] = useState<"id" | "code" | "name">("code")
+  const [sortKey, setSortKey] = useState<'code' | 'name' | 'maxOccupancy'>('code')
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(10)
@@ -33,7 +22,7 @@ export default function RoomTypesPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [selected, setSelected] = useState<RoomType | null>(null)
   const [editOpen, setEditOpen] = useState(false)
-  const [edit, setEdit] = useState<{ id?: number, code: string, name: string, base_price: string, capacity: string, description: string }>({ code: "", name: "", base_price: "", capacity: "", description: "" })
+  const [edit, setEdit] = useState<{ id?: number, code: string, name: string, basePrice: number, maxOccupancy: number, description: string }>({ code: "", name: "", basePrice: 0, maxOccupancy: 1, description: "" })
   const [confirmOpen, setConfirmOpen] = useState<{ open: boolean, id?: number }>({ open: false })
 
   useEffect(() => {
@@ -42,6 +31,29 @@ export default function RoomTypesPage() {
     return () => clearTimeout(t)
   }, [flash])
 
+  // Keyboard shortcuts for edit modal
+  useEffect(() => {
+    if (!editOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        save()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        setEditOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [editOpen, edit])
+
+  // Sync with hooks data
+  useEffect(() => {
+    if (roomTypesData) setRows(roomTypesData as RoomType[])
+  }, [roomTypesData])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const list = q
@@ -49,41 +61,83 @@ export default function RoomTypesPage() {
       : rows
     const dir = sortOrder === 'asc' ? 1 : -1
     return [...list].sort((a, b) => {
-      if (sortKey === 'id') return (a.id - b.id) * dir
       if (sortKey === 'code') return a.code.localeCompare(b.code) * dir
-      return a.name.localeCompare(b.name) * dir
+      if (sortKey === 'name') return a.name.localeCompare(b.name) * dir
+      if (sortKey === 'maxOccupancy') return (a.maxOccupancy - b.maxOccupancy) * dir
+      return 0
     })
   }, [rows, query, sortKey, sortOrder])
 
   function openCreate() {
-    setEdit({ code: "", name: "", base_price: "", capacity: "", description: "" })
+    // Tính mã tiếp theo: ưu tiên parse từ code nếu là số, nếu không dùng id
+    const numbers = rows.map(r => {
+      const n = parseInt(r.code, 10)
+      return Number.isNaN(n) ? r.id : n
+    })
+    const maxNum = numbers.length ? Math.max(...numbers) : 0
+    const nextCode = String(maxNum + 1)
+    setEdit({ code: nextCode, name: "", basePrice: 0, maxOccupancy: 1, description: "" })
     setEditOpen(true)
   }
 
-  function openEdit(r: RoomType) {
-    setEdit({ id: r.id, code: r.code, name: r.name, base_price: String(r.base_price), capacity: String(r.capacity), description: r.description || "" })
+  function openEdit(rt: RoomType) {
+    setEdit({ 
+      id: rt.id, 
+      code: rt.code, 
+      name: rt.name, 
+      basePrice: rt.basePrice, 
+      maxOccupancy: rt.maxOccupancy, 
+      description: rt.description || "" 
+    })
     setEditOpen(true)
   }
 
-  function save() {
-    if (!edit.code.trim() || !edit.name.trim() || !edit.base_price || isNaN(Number(edit.base_price)) || !edit.capacity || isNaN(Number(edit.capacity))) {
-      setFlash({ type: 'error', text: 'Vui lòng nhập Code, Name và giá/sức chứa hợp lệ.' })
+  async function save() {
+    if (!edit.code.trim() || !edit.name.trim()) {
+      setFlash({ type: 'error', text: 'Vui lòng nhập Code và Tên loại phòng.' })
       return
     }
-    const payload: RoomType = {
-      id: edit.id ?? (rows.length ? Math.max(...rows.map(r => r.id)) + 1 : 1),
+    if (edit.basePrice < 0) {
+      setFlash({ type: 'error', text: 'Giá cơ bản không được âm.' })
+      return
+    }
+    if (edit.maxOccupancy < 1) {
+      setFlash({ type: 'error', text: 'Số người tối đa phải lớn hơn 0.' })
+      return
+    }
+    const payload = {
       code: edit.code.trim(),
       name: edit.name.trim(),
-      base_price: Number(edit.base_price),
-      capacity: Number(edit.capacity),
-      description: edit.description.trim() || undefined,
+      basePrice: edit.basePrice,
+      maxOccupancy: edit.maxOccupancy,
+      description: edit.description.trim() || "",
     }
     if (edit.id) {
-      setRows(rs => rs.map(r => r.id === edit.id ? payload : r))
-      setFlash({ type: 'success', text: 'Đã cập nhật loại phòng.' })
+      const response = await fetch('/api/system/room-types', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: edit.id, ...payload })
+      })
+      if (response.ok) {
+        await refetchRoomTypes()
+        setFlash({ type: 'success', text: 'Đã cập nhật loại phòng.' })
+      } else {
+        const errorData = await response.json()
+        setFlash({ type: 'error', text: errorData.error || 'Có lỗi xảy ra khi cập nhật.' })
+      }
     } else {
-      setRows(rs => [...rs, payload])
-      setFlash({ type: 'success', text: 'Đã tạo loại phòng mới.' })
+      const response = await fetch('/api/system/room-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (response.ok) {
+        await refetchRoomTypes()
+        setFlash({ type: 'success', text: 'Đã tạo loại phòng mới.' })
+      } else {
+        const errorData = await response.json()
+        setFlash({ type: 'error', text: errorData.error || 'Có lỗi xảy ra khi tạo mới.' })
+      }
     }
     setEditOpen(false)
   }
@@ -92,227 +146,611 @@ export default function RoomTypesPage() {
     setConfirmOpen({ open: true, id })
   }
 
-  function doDelete() {
+  async function doDelete() {
     if (!confirmOpen.id) return
-    setRows(rs => rs.filter(r => r.id !== confirmOpen.id))
+    const response = await fetch(`/api/system/room-types?id=${confirmOpen.id}`, { method: 'DELETE' })
+    if (response.ok) {
+      await refetchRoomTypes()
+      setFlash({ type: 'success', text: 'Đã xóa loại phòng.' })
+    } else {
+      const errorData = await response.json()
+      setFlash({ type: 'error', text: errorData.error || 'Có lỗi xảy ra khi xóa.' })
+    }
     setConfirmOpen({ open: false })
-    setFlash({ type: 'success', text: 'Đã xóa loại phòng.' })
   }
 
   return (
     <>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">Quản lý loại phòng</h1>
-            <p className="text-xs sm:text-sm lg:text-base text-gray-600 mt-1">Theo dõi và quản lý các loại phòng trong hệ thống</p>
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-bold text-gray-900 truncate">Loại phòng</h1>
+              <p className="text-xs text-gray-500">{filtered.length} loại phòng</p>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <Button className="h-8 sm:h-9 px-3 sm:px-4 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-xs sm:text-sm whitespace-nowrap" onClick={openCreate}>
-              Tạo loại phòng
-            </Button>
-            <button
-              type="button"
-              aria-label="Xuất Excel"
-              title="Xuất Excel"
-              className="h-8 sm:h-9 px-2 sm:px-3 rounded-md border border-gray-300 bg-white text-xs sm:text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-              onClick={() => {
-                const csv = [['ID', 'Code', 'Tên', 'Giá cơ bản', 'Mô tả'], ...filtered.map(r => [r.id, r.code, r.name, r.base_price, r.description || ''])]
-                const blob = new Blob([csv.map(r => r.join(',')).join('\n')], { type: 'text/csv' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `room-types_${new Date().toISOString().slice(0,10)}.xlsx`
-                a.click()
-                URL.revokeObjectURL(url)
-              }}
-            >
-              Xuất excel
-            </button>
-          </div>
+          <Button 
+            onClick={openCreate} 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm flex-shrink-0"
+          >
+            <svg className="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span className="hidden sm:inline">Thêm loại phòng</span>
+            <span className="sm:hidden">Thêm</span>
+          </Button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
-        {flash && (
-          <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${flash.type==='success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-            {flash.text}
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
-            <Input
-              className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
-              placeholder="Tìm theo code, tên, mô tả..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Sắp xếp</label>
-            <div className="flex gap-2">
-              <select className="h-8 sm:h-9 rounded-md border border-gray-300 bg-white px-2 sm:px-3 text-xs sm:text-sm flex-1" value={sortKey} onChange={(e) => setSortKey(e.target.value as any)}>
-                <option value="code">Code</option>
-                <option value="name">Tên</option>
-                <option value="id">ID</option>
-                <option value="base_price">Giá cơ bản</option>
-              </select>
-              <select className="h-8 sm:h-9 rounded-md border border-gray-300 bg-white px-2 sm:px-3 text-xs sm:text-sm flex-1" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)}>
-                <option value="asc">Tăng dần</option>
-                <option value="desc">Giảm dần</option>
-              </select>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="space-y-6">
+          {/* Flash Messages */}
+          {flash && (
+            <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
+              flash.type === 'success' 
+                ? 'bg-green-50 border-green-200 text-green-800' 
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}>
+              {flash.text}
             </div>
-          </div>
-        </div>
+          )}
 
-      <Card>
-        <CardHeader>
-          <div className="text-xs sm:text-sm text-gray-600">Tổng: {filtered.length} loại phòng</div>
-        </CardHeader>
-        <CardBody className="p-0">
-          <div className="overflow-x-auto">
-          <table className="min-w-[800px] w-full table-fixed text-xs sm:text-sm">
-            <colgroup>
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[15%]" />
-              <col className="w-[15%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[20%]" />
-            </colgroup>
-            <thead>
-              <tr className="bg-gray-200 text-gray-700 text-xs sm:text-sm">
-                <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">ID</th>
-                <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Code</th>
-                <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Name</th>
-                <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Giá cơ bản</th>
-                <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Sức chứa</th>
-                <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Mô tả</th>
-                <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.slice((page - 1) * size, (page - 1) * size + size).map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-2 sm:px-3 py-1.5 sm:py-2 whitespace-nowrap text-xs sm:text-sm">{r.id}</td>
-                  <td className="px-2 sm:px-3 py-1.5 sm:py-2 whitespace-nowrap">
-                    <span role="button" tabIndex={0} className="cursor-pointer underline underline-offset-2 text-blue-600 hover:text-blue-700 text-xs sm:text-sm" onClick={() => { setSelected(r); setDetailOpen(true); }}>{r.code}</span>
-                  </td>
-                  <td className="px-2 sm:px-3 py-1.5 sm:py-2 whitespace-nowrap text-xs sm:text-sm">{r.name}</td>
-                  <td className="px-2 sm:px-3 py-1.5 sm:py-2 whitespace-nowrap text-xs sm:text-sm">{r.base_price.toLocaleString('vi-VN')} ₫</td>
-                  <td className="px-2 sm:px-3 py-1.5 sm:py-2 whitespace-nowrap text-xs sm:text-sm">{r.capacity}</td>
-                  <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-600 truncate max-w-[180px] sm:max-w-[260px] lg:max-w-[360px] text-xs sm:text-sm" title={r.description}>{r.description}</td>
-                  <td className="px-2 sm:px-3 py-1.5 sm:py-2">
-                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                      <Button variant="secondary" className="h-6 sm:h-8 px-2 sm:px-3 text-xs" onClick={() => openEdit(r)}>Sửa</Button>
-                      <Button variant="danger" className="h-6 sm:h-8 px-2 sm:px-3 text-xs" onClick={() => confirmDelete(r.id)}>Xóa</Button>
+          {/* Filters */}
+          <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+            {/* Mobile: 2 hàng */}
+            <div className="lg:hidden space-y-3">
+              {/* Hàng 1: Tìm kiếm và Sắp xếp */}
+              <div className="flex flex-row gap-2 items-center">
+                {/* Tìm kiếm */}
+                <div className="flex-1 min-w-0">
+                  <div className="relative">
+                    <Input
+                      placeholder="Tìm kiếm..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      className="w-full pl-3 pr-8 py-2 text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                
+                {/* Sắp xếp */}
+                <div className="w-32 flex-shrink-0">
+                  <select
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as 'code' | 'name' | 'maxOccupancy')}
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="code">Code</option>
+                    <option value="name">Tên</option>
+                    <option value="maxOccupancy">Số người</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Hàng 2: Thứ tự */}
+              <div className="flex flex-row gap-2 items-center">
+                {/* Thứ tự */}
+                <div className="w-28 flex-shrink-0">
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="asc">Tăng dần</option>
+                    <option value="desc">Giảm dần</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop: 1 hàng */}
+            <div className="hidden lg:flex flex-row gap-3 items-center">
+              {/* Tìm kiếm */}
+              <div className="flex-1 min-w-0">
+                <div className="relative">
+                  <Input
+                    placeholder="Tìm kiếm loại phòng..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="w-full pl-4 pr-10 py-2 text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Sắp xếp */}
+              <div className="w-36 flex-shrink-0">
+                <select
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as 'code' | 'name' | 'maxOccupancy')}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="code">Theo Code</option>
+                  <option value="name">Theo Tên</option>
+                  <option value="maxOccupancy">Theo Số người</option>
+                </select>
+              </div>
+              
+              {/* Thứ tự */}
+              <div className="w-28 flex-shrink-0">
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="asc">Tăng dần</option>
+                  <option value="desc">Giảm dần</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs sm:text-sm">
+          {/* Table */}
+          <div className="px-4 py-6">
+            <div className="max-w-7xl mx-auto">
+              <Card className="bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-xl rounded-2xl overflow-hidden">
+                <CardHeader className="bg-gray-50 border-b border-gray-200 px-6 py-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-gray-900">Danh sách loại phòng</h2>
+                    <span className="text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">{filtered.length} loại phòng</span>
+                  </div>
+                </CardHeader>
+                <CardBody className="p-0">
+                  {/* Desktop Table */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <colgroup>
+                        <col className="w-[5%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[5%]" />
+                        <col className="w-[15%]" />
+                      </colgroup>
+                      <thead>
+                        <tr className="bg-gray-50 text-gray-700">
+                          <th className="px-4 py-3 text-center font-semibold">Code</th>
+                          <th className="px-4 py-3 text-center font-semibold">Tên loại phòng</th>
+                          <th className="px-4 py-3 text-center font-semibold">Giá cơ bản</th>
+                          <th className="px-4 py-3 text-center font-semibold">Số người</th>
+                          <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.slice((page - 1) * size, page * size).map((row) => (
+                          <tr key={row.id} className="hover:bg-gray-50 border-b border-gray-100">
+                            <td className="px-4 py-3 text-center font-medium text-gray-900">{row.code}</td>
+                            <td className="px-4 py-3 text-center text-gray-700">{row.name}</td>
+                            <td className="px-4 py-3 text-center">
+                              {row.basePrice === 0 ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  Miễn phí
+                                </span>
+                              ) : (
+                                <span className="text-gray-700">{row.basePrice.toLocaleString('vi-VN')} VND</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center text-gray-700">{row.maxOccupancy}</td>
+                            <td className="px-4 py-3 text-center">
+                              <div className="flex gap-2 justify-center">
+                                <Button
+                                  variant="secondary"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={() => {
+                                    setSelected(row)
+                                    setDetailOpen(true)
+                                  }}
+                                >
+                                  Xem
+                                </Button>
+                                <Button
+                                  className="h-8 px-3 text-xs"
+                                  onClick={() => openEdit(row)}
+                                >
+                                  Sửa
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={() => confirmDelete(row.id)}
+                                >
+                                  Xóa
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="lg:hidden p-4">
+  <div className="grid grid-cols-1 gap-4">
+    {filtered.slice((page - 1) * size, page * size).map((row) => (
+      <div
+        key={row.id}
+        className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-4"
+      >
+        <div className="grid grid-cols-[auto_1fr] gap-3 mb-4 items-center">
+          {/* Cột 1: Icon chữ cái đầu */}
+          <div className="flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-base">
+                {row.code.charAt(0)}
+              </span>
+            </div>
+          </div>
+
+          {/* Cột 2: Thông tin */}
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-gray-800 break-words whitespace-normal leading-snug font-medium">
+              {row.name}
+            </p>
+
+            {/* Giá tiền */}
             <div className="flex items-center gap-2">
-              <span>Hàng:</span>
-              <select className="h-7 sm:h-8 rounded-md border border-gray-300 bg-white px-2 text-xs sm:text-sm" value={size} onChange={(e) => { setPage(1); setSize(parseInt(e.target.value, 10)); }}>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <span className="text-gray-500">trên {filtered.length}</span>
+              <svg
+                className="w-4 h-4 text-indigo-500 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                />
+              </svg>
+              <span
+                className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+                  row.basePrice === 0
+                    ? "bg-green-100 text-green-700"
+                    : "bg-indigo-100 text-indigo-700"
+                }`}
+              >
+                {row.basePrice === 0
+                  ? "Miễn phí"
+                  : `${row.basePrice.toLocaleString("vi-VN")} VND`}
+              </span>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant="secondary" className="h-7 sm:h-8 px-2 sm:px-3 text-xs" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Trước</Button>
-              <span className="px-2 text-xs sm:text-sm">Trang {page} / {Math.max(1, Math.ceil(filtered.length / size))}</span>
-              <Button variant="secondary" className="h-7 sm:h-8 px-2 sm:px-3 text-xs" disabled={page >= Math.ceil(filtered.length / size)} onClick={() => setPage(p => Math.min(Math.ceil(filtered.length / size), p + 1))}>Sau</Button>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
 
-      {/* Modal chi tiết */}
-      <Modal open={detailOpen} onClose={() => setDetailOpen(false)} title="Chi tiết loại phòng">
-        {selected ? (
-          <div className="space-y-2 text-sm">
-            <div><span className="font-medium">ID:</span> {selected.id}</div>
-            <div><span className="font-medium">Code:</span> {selected.code}</div>
-            <div><span className="font-medium">Name:</span> {selected.name}</div>
-            <div><span className="font-medium">Giá cơ bản:</span> {selected.base_price.toLocaleString('vi-VN')} ₫</div>
-            <div><span className="font-medium">Sức chứa:</span> {selected.capacity}</div>
-            <div><span className="font-medium">Mô tả:</span> {selected.description || '—'}</div>
+            {/* Số người */}
+            <div className="flex items-center gap-2">
+              <svg
+                className="w-4 h-4 text-blue-500 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                {row.maxOccupancy} người
+              </span>
+            </div>
           </div>
-        ) : null}
+        </div>
+
+        {/* Nút thao tác */}
+        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
+          <Button
+            variant="secondary"
+            className="h-9 text-xs font-medium"
+            onClick={() => {
+              setSelected(row);
+              setDetailOpen(true);
+            }}
+          >
+            <svg
+              className="w-3 h-3 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+            Xem
+          </Button>
+
+          <Button
+            className="h-9 text-xs font-medium"
+            onClick={() => openEdit(row)}
+          >
+            <svg
+              className="w-3 h-3 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            Sửa
+          </Button>
+
+          <Button
+            variant="danger"
+            className="h-9 text-xs font-medium"
+            onClick={() => confirmDelete(row.id)}
+          >
+            <svg
+              className="w-3 h-3 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+            Xóa
+          </Button>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+                </CardBody>
+
+                {/* Pagination */}
+                {filtered.length > size && (
+                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-200/50">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
+                      <div className="text-center sm:text-left">
+                        <div className="text-xs sm:text-sm text-gray-600 mb-1">Hiển thị kết quả</div>
+                        <div className="text-sm sm:text-lg font-bold text-gray-900">
+                          <span className="text-blue-600">{(page - 1) * size + 1}</span> - <span className="text-blue-600">{Math.min(page * size, filtered.length)}</span> / <span className="text-gray-600">{filtered.length}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        <Button
+                          variant="secondary"
+                          disabled={page === 1}
+                          onClick={() => setPage(page - 1)}
+                          className="h-8 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                          <span className="hidden sm:inline">Trước</span>
+                        </Button>
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <span className="text-xs sm:text-sm font-bold text-gray-700 bg-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl border-2 border-blue-200 shadow-sm">
+                            {page}
+                          </span>
+                          <span className="text-xs sm:text-sm text-gray-500">/ {Math.ceil(filtered.length / size)}</span>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          disabled={page >= Math.ceil(filtered.length / size)}
+                          onClick={() => setPage(page + 1)}
+                          className="h-8 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="hidden sm:inline">Sau</span>
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Detail Modal */}
+      <Modal open={detailOpen} onClose={() => setDetailOpen(false)} title="Chi tiết loại phòng">
+        <div className="p-4 sm:p-6">
+          {selected && (
+            <div className="space-y-6">
+              {/* Header với thông tin chính */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 sm:p-6 border border-blue-200">
+                {/* Thông tin loại phòng chính */}
+                <div className="space-y-4">
+                  {/* Header với icon */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Loại {selected.code}</h2>
+                        <p className="text-base sm:text-lg lg:text-xl text-gray-600 truncate">{selected.name}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Thông tin nhanh */}
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span className="text-xs sm:text-sm font-semibold text-blue-700 uppercase">ID</span>
+                      </div>
+                      <p className="text-lg sm:text-xl font-bold text-blue-900">{selected.id}</p>
+                    </div>
+
+                    <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span className="text-xs sm:text-sm font-semibold text-blue-700 uppercase">Số người</span>
+                      </div>
+                      <p className="text-lg sm:text-xl font-bold text-blue-900">{selected.maxOccupancy}</p>
+                    </div>
+                  </div>
+
+                  {/* Giá cơ bản */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                      <span className="text-xs sm:text-sm font-semibold text-blue-700 uppercase">Giá cơ bản</span>
+                    </div>
+                    <p className="text-base sm:text-lg font-bold text-blue-900">
+                      {selected.basePrice === 0 ? 'Miễn phí' : `${selected.basePrice.toLocaleString('vi-VN')} VND`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </Modal>
 
-      {/* Modal tạo/sửa */}
-      <Modal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        title={edit.id ? 'Sửa loại phòng' : 'Tạo loại phòng'}
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditOpen(false)}>Hủy</Button>
-            <Button onClick={save}>Lưu</Button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Code</label>
-            <Input value={edit.code} onChange={(e) => setEdit((f) => ({ ...f, code: e.target.value }))} />
-            {!edit.code.trim() && <div className="mt-1 text-xs text-red-600">Code bắt buộc.</div>}
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Name</label>
-            <Input value={edit.name} onChange={(e) => setEdit((f) => ({ ...f, name: e.target.value }))} />
-            {!edit.name.trim() && <div className="mt-1 text-xs text-red-600">Name bắt buộc.</div>}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Giá cơ bản (₫)</label>
-              <Input value={edit.base_price} onChange={(e) => setEdit((f) => ({ ...f, base_price: e.target.value }))} />
-              {(!edit.base_price || isNaN(Number(edit.base_price))) && <div className="mt-1 text-xs text-red-600">Giá hợp lệ bắt buộc.</div>}
+      {/* Edit Modal */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={edit.id ? 'Sửa loại phòng' : 'Thêm loại phòng mới'}>
+        <div className="p-4 sm:p-6">
+          <div className="space-y-4">
+            {/* Form */}
+            <div className="space-y-3">
+              {/* Code và Tên loại phòng */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                  <Input
+                    value={edit.code}
+                    onChange={(e) => setEdit({ ...edit, code: e.target.value })}
+                    placeholder="Nhập code loại phòng"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tên loại phòng *</label>
+                  <Input
+                    value={edit.name}
+                    onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+                    placeholder="Nhập tên loại phòng"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Giá cơ bản và Số người */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá cơ bản *</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={edit.basePrice}
+                    onChange={(e) => setEdit({ ...edit, basePrice: Number(e.target.value) })}
+                    placeholder="Giá cơ bản (0 = miễn phí)"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Số người tối đa *</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={edit.maxOccupancy}
+                    onChange={(e) => setEdit({ ...edit, maxOccupancy: Number(e.target.value) })}
+                    placeholder="Số người tối đa"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Mô tả - chỉ hiển thị trên desktop */}
+              <div className="hidden sm:block">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                <textarea
+                  value={edit.description}
+                  onChange={(e) => setEdit({ ...edit, description: e.target.value })}
+                  placeholder="Nhập mô tả loại phòng"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Sức chứa</label>
-              <Input value={edit.capacity} onChange={(e) => setEdit((f) => ({ ...f, capacity: e.target.value }))} />
-              {(!edit.capacity || isNaN(Number(edit.capacity))) && <div className="mt-1 text-xs text-red-600">Sức chứa hợp lệ bắt buộc.</div>}
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-gray-200">
+              <Button 
+                variant="secondary" 
+                onClick={() => setEditOpen(false)}
+                className="w-full sm:w-auto"
+              >
+                Hủy
+              </Button>
+              <Button 
+                onClick={save}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+              >
+                {edit.id ? 'Cập nhật' : 'Tạo mới'}
+              </Button>
             </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Mô tả</label>
-            <Input value={edit.description} onChange={(e) => setEdit((f) => ({ ...f, description: e.target.value }))} />
           </div>
         </div>
       </Modal>
 
-      {/* Xác nhận xóa */}
-      <Modal
-        open={confirmOpen.open}
-        onClose={() => setConfirmOpen({ open: false })}
-        title="Xác nhận xóa"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setConfirmOpen({ open: false })}>Hủy</Button>
-            <Button variant="danger" onClick={doDelete}>Xóa</Button>
+      {/* Delete Confirmation Modal */}
+      <Modal open={confirmOpen.open} onClose={() => setConfirmOpen({ open: false })} title="Xác nhận xóa">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Xác nhận xóa</h2>
+          <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa loại phòng này không?</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setConfirmOpen({ open: false })}>
+              Hủy
+            </Button>
+            <Button variant="danger" onClick={doDelete}>
+              Xóa
+            </Button>
           </div>
-        }
-      >
-        <div className="text-sm text-gray-700">Bạn có chắc muốn xóa loại phòng này?        </div>
+        </div>
       </Modal>
-      </div>
     </>
   );
 }
-
-
-

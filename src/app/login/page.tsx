@@ -179,11 +179,11 @@ export default function LoginPage() {
       // Redirect based on selected role
       const redirectUrl = (() => {
         switch (currentRole) {
-          case 'admin': return '/admin';
-          case 'office': return '/office';
-          case 'lecturer': return '/lecturer';
-          case 'staff': return '/staff';
-          case 'guest': return '/guest';
+          case 'admin': return '/admin/dashboard';
+          case 'office': return '/office/dashboard';
+          case 'lecturer': return '/user/dashboard';
+          case 'staff': return '/staff/dashboard';
+          case 'guest': return '/user/dashboard';
           default: 
             console.error('❌ Invalid role selected:', currentRole);
             return '/';

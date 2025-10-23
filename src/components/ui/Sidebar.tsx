@@ -26,17 +26,27 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
 
   const isAdmin = pathname.startsWith('/admin');
   const isOffice = pathname.startsWith('/office');
-  const isLecturer = pathname.startsWith('/lecturer');
   const isStaff = pathname.startsWith('/staff');
-  const isGuest = pathname.startsWith('/guest');
+  const isUser = pathname.startsWith('/user');
+  const isProfile = pathname.startsWith('/profile');
+  const isNotifications = pathname.startsWith('/notifications');
+
+  // Get user role from sessionStorage if available
+  const getUserRole = () => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('userRole');
+    }
+    return null;
+  };
+
+  const userRole = getUserRole();
 
   // Auto-detect user role based on path
   const detectedUser = user || (() => {
     if (isAdmin) return { name: "Admin User", email: "admin@sorms.com", role: "Administrator" };
     if (isOffice) return { name: "Office Staff", email: "office@sorms.com", role: "Office Staff" };
-    if (isLecturer) return { name: "Lecturer", email: "lecturer@sorms.com", role: "Lecturer" };
     if (isStaff) return { name: "Staff Member", email: "staff@sorms.com", role: "Staff" };
-    if (isGuest) return { name: "Guest User", email: "guest@sorms.com", role: "Guest" };
+    if (isUser) return { name: "User", email: "user@sorms.com", role: "User" };
     return null;
   })();
 
@@ -44,14 +54,12 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
   const Icons = {
     Dashboard: () => (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
       </svg>
     ),
     Rooms: () => (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
       </svg>
     ),
     RoomTypes: () => (
@@ -66,18 +74,17 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
     ),
     Checkin: () => (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
     Services: () => (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
       </svg>
     ),
     ServiceOrders: () => (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
       </svg>
     ),
     Payments: () => (
@@ -114,101 +121,130 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
       </svg>
+    ),
+    Bed: () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+      </svg>
+    ),
+    Service: () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    Invoice: () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
     )
   };
 
   // Simplified navigation - no submenus, only single links
   const getNavigation = () => {
-    if (isAdmin) {
+    // Check userRole from sessionStorage first, then fallback to path detection
+    const currentRole = userRole || (isAdmin ? 'admin' : isOffice ? 'office' : isStaff ? 'staff' : isUser ? 'user' : null);
+    
+    if (isAdmin || currentRole === 'admin') {
       return [
         { 
           name: 'Dashboard', 
-          href: '/admin', 
+          href: '/admin/dashboard', 
           icon: <Icons.Dashboard />, 
-          current: pathname === '/admin'
+          current: pathname === '/admin/dashboard'
         },
         { 
           name: 'Phòng', 
           href: '/admin/rooms', 
           icon: <Icons.Rooms />, 
-          current: pathname === '/admin/rooms'
+          current: pathname.startsWith('/admin/rooms')
         },
         { 
           name: 'Loại phòng', 
           href: '/admin/room-types', 
           icon: <Icons.RoomTypes />, 
-          current: pathname === '/admin/room-types'
+          current: pathname.startsWith('/admin/room-types')
         },
         { 
           name: 'Đặt phòng', 
           href: '/admin/bookings', 
           icon: <Icons.Bookings />, 
-          current: pathname === '/admin/bookings'
+          current: pathname.startsWith('/admin/bookings')
         },
         { 
           name: 'Check-in/out', 
           href: '/admin/checkins', 
           icon: <Icons.Checkin />, 
-          current: pathname === '/admin/checkins'
+          current: pathname.startsWith('/admin/checkins')
         },
         { 
           name: 'Dịch vụ', 
           href: '/admin/services', 
           icon: <Icons.Services />, 
-          current: pathname === '/admin/services'
+          current: pathname.startsWith('/admin/services')
         },
         { 
           name: 'Đơn dịch vụ', 
           href: '/admin/service-orders', 
           icon: <Icons.ServiceOrders />, 
-          current: pathname === '/admin/service-orders'
+          current: pathname.startsWith('/admin/service-orders')
         },
         { 
           name: 'Thanh toán', 
           href: '/admin/payments', 
           icon: <Icons.Payments />, 
-          current: pathname === '/admin/payments'
+          current: pathname.startsWith('/admin/payments')
         },
         { 
           name: 'Công việc', 
           href: '/admin/tasks', 
           icon: <Icons.Tasks />, 
-          current: pathname === '/admin/tasks'
+          current: pathname.startsWith('/admin/tasks')
         },
         { 
           name: 'Người dùng', 
           href: '/admin/users', 
           icon: <Icons.Users />, 
-          current: pathname === '/admin/users'
+          current: pathname.startsWith('/admin/users')
         },
         { 
           name: 'Phân quyền', 
           href: '/admin/roles', 
           icon: <Icons.Roles />, 
-          current: pathname === '/admin/roles'
+          current: pathname.startsWith('/admin/roles')
         },
       ];
-    } else if (isOffice) {
+    } else if (isOffice || currentRole === 'office') {
       return [
-        { name: 'Dashboard', href: '/office', icon: <Icons.Dashboard />, current: pathname === '/office' },
+        { name: 'Dashboard', href: '/office/dashboard', icon: <Icons.Dashboard />, current: pathname.startsWith('/office/dashboard') },
+        { name: 'Duyệt đặt phòng', href: '/office/bookings', icon: <Icons.Bookings />, current: pathname.startsWith('/office/bookings') },
+        { name: 'Quản lý phòng', href: '/office/rooms', icon: <Icons.Rooms />, current: pathname.startsWith('/office/rooms') },
+        { name: 'Báo cáo', href: '/office/reports', icon: <Icons.Payments />, current: pathname.startsWith('/office/reports') },
       ];
-    } else if (isLecturer) {
+  
+    } else if (isStaff || currentRole === 'staff') {
       return [
-        { name: 'Dashboard', href: '/lecturer', icon: <Icons.Dashboard />, current: pathname === '/lecturer' },
+        { name: 'Dashboard', href: '/staff/dashboard', icon: <Icons.Dashboard />, current: pathname.startsWith('/staff/dashboard') },
+        { name: 'Check-in/out', href: '/staff/checkins', icon: <Icons.Checkin />, current: pathname.startsWith('/staff/checkins') },
+        { name: 'Dịch vụ', href: '/staff/services', icon: <Icons.Services />, current: pathname.startsWith('/staff/services') },
+        { name: 'Công việc', href: '/staff/tasks', icon: <Icons.Tasks />, current: pathname.startsWith('/staff/tasks') },
       ];
-    } else if (isStaff) {
+    
+    } else if (isUser || currentRole === 'user') {
       return [
-        { name: 'Dashboard', href: '/staff', icon: <Icons.Dashboard />, current: pathname === '/staff' },
+        { name: 'Dashboard', href: '/user/dashboard', icon: <Icons.Dashboard />, current: pathname.startsWith('/user/dashboard') },
+        { name: 'Phòng có sẵn', href: '/user/rooms', icon: <Icons.Bed />, current: pathname.startsWith('/user/rooms') },
+        { name: 'Đặt phòng', href: '/user/bookings', icon: <Icons.Bookings />, current: pathname.startsWith('/user/bookings') },
+        { name: 'Dịch vụ', href: '/user/services', icon: <Icons.Service />, current: pathname.startsWith('/user/services') },
+        { name: 'Hóa đơn', href: '/user/invoices', icon: <Icons.Invoice />, current: pathname.startsWith('/user/invoices') },
       ];
-    } else if (isGuest) {
+    } else if (isProfile) {
       return [
-        { name: 'Dashboard', href: '/guest', icon: <Icons.Dashboard />, current: pathname === '/guest' },
+        { name: 'Hồ sơ cá nhân', href: '/profile', icon: <Icons.Dashboard />, current: pathname === '/profile' },
       ];
     } else {
       return [
-        { name: 'Trang chủ', href: '/', icon: <Icons.Home />, current: pathname === '/' },
-        { name: 'Về chúng tôi', href: '/about', icon: <Icons.About />, current: pathname === '/about' },
-        { name: 'Liên hệ', href: '/contact', icon: <Icons.Contact />, current: pathname === '/contact' },
+        { name: 'Dashboard', href: '/', icon: <Icons.Dashboard />, current: pathname === '/' },
       ];
     }
   };
@@ -218,35 +254,35 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
   return (
     <div 
       data-sidebar
-      className={`bg-white border-r border-gray-200 transition-all duration-300 ${
-        sidebarCollapsed ? 'w-20' : 'w-60'
+      className={`bg-white/95 backdrop-blur-sm border-r border-gray-200/50 transition-all duration-300 ${
+        sidebarCollapsed ? 'w-20' : 'w-64'
       } ${!isVisible ? 'hidden' : ''}`}
     >
       {/* Header */}
-      <div className="p-3 border-b border-gray-100">
+      <div className="p-4 border-b border-gray-100/50 bg-gradient-to-r from-gray-50 to-white">
         {sidebarCollapsed ? (
           <div className="flex justify-center">
-            <div className="w-6 h-6 bg-gray-900 rounded-md flex items-center justify-center">
-              <span className="text-white font-semibold text-xs">S</span>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-sm">S</span>
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-gray-900 rounded-md flex items-center justify-center">
-                <span className="text-white font-semibold text-xs">S</span>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-sm">S</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-gray-900">SORMS</span>
-                <span className="text-xs text-gray-500">Smart Office</span>
+                <span className="text-lg font-bold text-gray-900">SORMS</span>
+                <span className="text-xs text-gray-500 font-medium">Smart Office</span>
               </div>
             </div>
             <Button
               onClick={onToggleCollapsed}
               variant="ghost"
-              className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
               </svg>
             </Button>
@@ -254,49 +290,43 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
         )}
       </div>
 
-      {/* User Info */}
-      {detectedUser && !sidebarCollapsed && (
-        <div className="p-3 border-b border-gray-100">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gray-100 rounded-md flex items-center justify-center">
-              <span className="text-gray-700 font-medium text-xs">
-                {detectedUser.name?.charAt(0) || 'A'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium text-gray-900 truncate">{detectedUser.name}</div>
-              <div className="text-xs text-gray-500 truncate">{detectedUser.role}</div>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* Navigation */}
-      <nav className="p-2 space-y-1">
+      <nav className="p-3 space-y-2">
         {navigation.map((item) => (
           <Link
             key={item.name}
             href={item.href}
-            className={`group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+            onClick={() => {
+              // On mobile (when sidebar is not collapsed and isVisible is true), close sidebar after navigation
+              // Only close sidebar on mobile, not on desktop
+              if (typeof window !== 'undefined' && window.innerWidth < 1024 && !sidebarCollapsed && isVisible && onToggle) {
+                onToggle();
+              }
+            }}
+            className={`group flex items-center px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
               item.current
-                ? 'bg-gray-100 text-gray-900 border-l-3 border-gray-500 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm'
-            } ${sidebarCollapsed ? 'justify-center px-2' : ''}`}
+                ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-900 border-l-4 border-blue-500 shadow-lg transform scale-105'
+                : 'text-gray-700 hover:text-blue-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md hover:transform hover:scale-105'
+            } ${sidebarCollapsed ? 'justify-center px-3' : ''}`}
             title={sidebarCollapsed ? item.name : undefined}
           >
-            <span className="text-base mr-2 group-hover:scale-105 transition-transform">{item.icon}</span>
+            <span className={`text-lg mr-3 group-hover:scale-110 transition-transform duration-200 ${
+              item.current ? 'text-blue-600' : 'text-gray-500 group-hover:text-blue-600'
+            }`}>{item.icon}</span>
             {!sidebarCollapsed && (
               <div className="flex items-center justify-between flex-1">
-                <span className="text-sm">{item.name}</span>
+                <span className="text-sm font-medium">{item.name}</span>
                 {item.name === 'Dashboard' && (
-                  <span className="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 font-medium">
+                  <span className="text-xs bg-blue-200 text-blue-800 rounded-full px-2 py-1 font-bold">
                   </span>
                 )}
               </div>
             )}
             {sidebarCollapsed && (
-              <div className="absolute left-20 ml-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg">
-                <div className="font-medium">{item.name}</div>
+              <div className="absolute left-20 ml-3 px-4 py-3 bg-gray-900 text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
+                <div className="font-semibold">{item.name}</div>
                 <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-gray-900"></div>
               </div>
             )}
@@ -304,14 +334,7 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
         ))}
       </nav>
 
-      {/* Footer */}
-      {!sidebarCollapsed && (
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-200 bg-gray-50">
-          <div className="text-xs text-gray-500 text-center">
-            © 2024 SORMS
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 }

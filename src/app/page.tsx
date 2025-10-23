@@ -36,7 +36,7 @@ export default function HomePage() {
           Hệ thống quản lý nhà công vụ thông minh, giúp bạn quản lý phòng, dịch vụ và thanh toán 
           một cách hiệu quả và chuyên nghiệp.
         </p>
-               {/* CTA Button */}
+        {/* CTA Button */}
 <Link
   href="/login"
   className="group relative px-10 py-4 border-2 border-blue-600 text-blue-600 font-semibold text-lg rounded-xl shadow-sm hover:shadow-md transform hover:-translate-y-1 transition-all duration-300 overflow-hidden"
@@ -46,7 +46,6 @@ export default function HomePage() {
   </span>
   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 </Link>
-
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import Header from "@/components/ui/Header";
 import Sidebar from "@/components/ui/Sidebar";
 import Footer from "@/components/ui/Footer";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 interface ConditionalLayoutProps {
   children: ReactNode;
 }
@@ -20,6 +21,29 @@ function ConditionalLayoutContent({ children }: ConditionalLayoutProps) {
     role: string;
     avatar?: string;
   } | null>(null);
+
+  // Persist sidebar state across page navigation
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSidebarVisible = localStorage.getItem('sidebarVisible');
+      const savedSidebarCollapsed = localStorage.getItem('sidebarCollapsed');
+      
+      if (savedSidebarVisible !== null) {
+        setSidebarVisible(savedSidebarVisible === 'true');
+      }
+      if (savedSidebarCollapsed !== null) {
+        setSidebarCollapsed(savedSidebarCollapsed === 'true');
+      }
+    }
+  }, []);
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarVisible', sidebarVisible.toString());
+      localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString());
+    }
+  }, [sidebarVisible, sidebarCollapsed]);
 
   // Load user data from localStorage
   useEffect(() => {
@@ -48,32 +72,28 @@ function ConditionalLayoutContent({ children }: ConditionalLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Desktop Sidebar - Fixed on left */}
-      <div className={`hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 ${!sidebarVisible ? 'lg:hidden' : ''}`}>
+      <div className="hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:z-20">
         <Sidebar 
           user={user || undefined} 
-          isVisible={sidebarVisible}
+          isVisible={true}
           collapsed={sidebarCollapsed}
           onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
       </div>
       
       {/* Main Content Area - Pushed to right */}
-      <div className={`lg:transition-all lg:duration-300 ${sidebarVisible ? (sidebarCollapsed ? 'lg:ml-16 xl:ml-20' : 'lg:ml-64 xl:ml-72') : 'lg:ml-0'}`}>
+      <div className={`lg:transition-all lg:duration-300 ${sidebarCollapsed ? 'lg:ml-16 xl:ml-20' : 'lg:ml-64 xl:ml-72'}`}>
         {/* Header */}
         <div className="sticky top-0 z-30">
-          <Header onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} />
-        </div>
-        
-        {/* Mobile menu button */}
-        <div className="lg:hidden bg-white border-b border-gray-200 px-3 sm:px-4 py-2">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-          >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zM3 12a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zM3 20a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1z" />
-            </svg>
-          </button>
+          <Header onToggleSidebar={() => {
+            // On mobile, open the mobile sidebar
+            // On desktop, toggle the sidebar collapsed state
+            if (window.innerWidth < 1024) {
+              setSidebarOpen(true);
+            } else {
+              setSidebarCollapsed(!sidebarCollapsed);
+            }
+          }} />
         </div>
         
         {/* Page content */}
@@ -90,7 +110,12 @@ function ConditionalLayoutContent({ children }: ConditionalLayoutProps) {
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-black bg-opacity-20" onClick={() => setSidebarOpen(false)} />
           <div className="relative flex-1 flex flex-col max-w-xs sm:max-w-sm w-full bg-white">
-            <Sidebar user={user || undefined} isVisible={true} collapsed={false} />
+            <Sidebar 
+              user={user || undefined} 
+              isVisible={true} 
+              collapsed={false}
+              onToggle={() => setSidebarOpen(false)}
+            />
           </div>
         </div>
       )}

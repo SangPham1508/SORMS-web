@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDashboardData, getTimeSeriesData } from '@/lib/mock-data'
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const days = Math.min(Math.max(Number(searchParams.get('days') || '14'), 7), 30)
-  
-  const data = getDashboardData()
-  const series = getTimeSeriesData(days)
-  
-  return NextResponse.json({
-    count: data.payments.count,
-    sum: data.payments.sum,
-    series: series.map(s => ({ date: s.date, sum: s.payments }))
-  })
+  try {
+    const { searchParams } = new URL(req.url)
+    const days = Math.min(Math.max(Number(searchParams.get('days') || '14'), 7), 30)
+    
+    // Return empty data until backend implements payments API
+    const today = new Date()
+    const series = []
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(today.getDate() - i)
+      const dateStr = date.toISOString().slice(0, 10)
+      series.push({ date: dateStr, sum: 0 })
+    }
+    
+    return NextResponse.json({
+      count: 0,
+      sum: 0,
+      series
+    })
+  } catch (error) {
+    console.error('Payments API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    )
+  }
 }
 
 

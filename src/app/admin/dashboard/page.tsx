@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { getDashboardData, getTimeSeriesData } from '@/lib/mock-data'
 import Badge from '@/components/ui/Badge'
 
 // ===== Types =====
-type RangeKey = "7" | "14" | "30";
+type DateRange = { fromDate: string; toDate: string };
 type OccupancyResp = { total: number; occupied: number };
 type BookingsResp = { pending: number; series: { date: string; count: number }[] };
 type CheckinsResp = { series: { date: string; count: number }[] };
@@ -17,16 +16,50 @@ type TasksResp = { todo: number; in_progress: number; done: number; cancelled: n
 // ===== Helpers =====
 const fmtCurrency = (n: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(n);
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("vi-VN", { month: "2-digit", day: "2-digit" });
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("vi-VN", { 
+  year: "numeric", 
+  month: "2-digit", 
+  day: "2-digit",
+  weekday: "short"
+});
+
+const getDefaultDateRange = (): DateRange => {
+  const today = new Date();
+  const fromDate = new Date(today);
+  fromDate.setDate(today.getDate() - 14); // Default to 14 days
+  
+  return {
+    fromDate: fromDate.toISOString().split('T')[0],
+    toDate: today.toISOString().split('T')[0]
+  };
+};
+
+const formatDateRange = (dateRange: DateRange) => {
+  const from = new Date(dateRange.fromDate).toLocaleDateString("vi-VN", { 
+    year: "numeric", 
+    month: "2-digit", 
+    day: "2-digit" 
+  });
+  const to = new Date(dateRange.toDate).toLocaleDateString("vi-VN", { 
+    year: "numeric", 
+    month: "2-digit", 
+    day: "2-digit" 
+  });
+  return { from, to };
+};
 
 // ===== UI Components =====
 
 function Card({ title, actions, children, className = "" }: { title?: string; actions?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl sm:rounded-2xl border bg-white shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow ${className}`}>
+    <div className={`rounded-2xl border bg-white/80 backdrop-blur-sm shadow-lg p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group ${className}`}>
       {(title || actions) && (
-        <div className="mb-3 sm:mb-4 flex items-center justify-between">
-          {title && <h3 className="text-base sm:text-lg font-semibold text-gray-900">{title}</h3>}
+        <div className="mb-6 flex items-center justify-between">
+          {title && (
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+              {title}
+            </h3>
+          )}
           {actions}
         </div>
       )}
@@ -44,50 +77,91 @@ function KPICard({ title, value, hint, icon, trend, color = "blue" }: {
   color?: "gray" | "green" | "yellow" | "red" | "blue" | "orange" | "purple";
 }) {
   const colorClasses = {
-    gray: "bg-white border-gray-200 text-gray-700",
-    green: "bg-green-50 border-green-200 text-green-800", 
-    yellow: "bg-yellow-50 border-yellow-200 text-yellow-800",
-    red: "bg-red-50 border-red-200 text-red-800",
-    blue: "bg-blue-50 border-blue-200 text-blue-800",
-    orange: "bg-orange-50 border-orange-200 text-orange-800",
-    purple: "bg-purple-50 border-purple-200 text-purple-800"
+    gray: "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 text-gray-700",
+    green: "bg-gradient-to-br from-green-50 to-emerald-100 border-green-200 text-green-800", 
+    yellow: "bg-gradient-to-br from-yellow-50 to-amber-100 border-yellow-200 text-yellow-800",
+    red: "bg-gradient-to-br from-red-50 to-rose-100 border-red-200 text-red-800",
+    blue: "bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 text-blue-800",
+    orange: "bg-gradient-to-br from-orange-50 to-amber-100 border-orange-200 text-orange-800",
+    purple: "bg-gradient-to-br from-purple-50 to-violet-100 border-purple-200 text-purple-800"
   };
   
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white p-4 sm:p-6 hover:shadow-md transition-all duration-200 ${colorClasses[color]}`}>
-      <div className="flex items-center justify-between mb-2 sm:mb-3">
-        <div className="text-xs sm:text-sm font-medium text-gray-600">{title}</div>
-        {icon && <div className="text-xl sm:text-2xl opacity-80">{icon}</div>}
+    <div className={`rounded-2xl border bg-white/80 backdrop-blur-sm p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group ${colorClasses[color]}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{title}</div>
+        {icon && <div className="text-2xl opacity-80 group-hover:scale-110 transition-transform duration-200">{icon}</div>}
       </div>
-      <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">{value}</div>
-      {hint && <div className="text-xs sm:text-sm text-gray-500">{hint}</div>}
+      <div className="text-3xl font-bold text-gray-900 mb-2 group-hover:scale-105 transition-transform duration-200">{value}</div>
+      {hint && <div className="text-sm text-gray-500 mb-2">{hint}</div>}
       {trend && (
-        <div className={`mt-1 sm:mt-2 text-xs font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-          {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
+        <div className={`flex items-center gap-1 text-sm font-semibold ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${trend.isPositive ? 'bg-green-100' : 'bg-red-100'}`}>
+            {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
+          </span>
+          <span className="text-gray-500">so với tháng trước</span>
         </div>
       )}
     </div>
   );
 }
 
-function RangeSelector({ range, setRange }: { range: RangeKey; setRange: (r: RangeKey) => void }) {
+function DateRangeSelector({ dateRange, setDateRange }: { dateRange: DateRange; setDateRange: (range: DateRange) => void }) {
+  const formattedRange = formatDateRange(dateRange);
+  
+  const handleReset = () => {
+    setDateRange(getDefaultDateRange());
+  };
+  
   return (
-    <div className="flex gap-1 bg-gray-100 rounded-lg p-1" role="tablist" aria-label="Khoảng ngày">
-      {(["7", "14", "30"] as const).map((r) => (
-        <button
-          key={r}
-          role="tab"
-          aria-selected={range === r}
-          className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-all ${
-            range === r 
-              ? "bg-white text-gray-900 border border-gray-300 shadow-sm" 
-              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-          }`}
-          onClick={() => setRange(r)}
-        >
-          {r} ngày
-        </button>
-      ))}
+    <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-4 shadow-sm">
+      <div className="flex flex-row gap-4 items-end">
+        <div className="flex-1 min-w-0">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Từ ngày</label>
+          <div className="relative">
+            <input
+              type="date"
+              value={dateRange.fromDate}
+              onChange={(e) => setDateRange({ ...dateRange, fromDate: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80"
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Đến ngày</label>
+          <div className="relative">
+            <input
+              type="date"
+              value={dateRange.toDate}
+              onChange={(e) => setDateRange({ ...dateRange, toDate: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80"
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="flex-shrink-0 hidden sm:block">
+          <div className="h-full flex flex-col justify-end">
+            <button
+              onClick={handleReset}
+              className="group relative px-6 h-12 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <svg className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Reload
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -309,7 +383,7 @@ function Donut({ value, total, color = "#22c55e" }: { value: number; total: numb
 function Empty() {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-      <div className="text-4xl mb-2">📊</div>
+      <div className="text-4xl mb-2"></div>
       <div className="text-sm">Không có dữ liệu</div>
     </div>
   );
@@ -325,7 +399,7 @@ function Skeleton({ className = "h-24" }: { className?: string }) {
 // ===== Main Component =====
 
 export default function AdminHome() {
-  const [range, setRange] = useState<RangeKey>("14");
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -349,7 +423,6 @@ export default function AdminHome() {
     
     const ac = new AbortController();
     abortRef.current = ac;
-    const d = Number(range);
     
     // Add a small delay to prevent rapid aborting
     const timeoutId = setTimeout(() => {
@@ -374,9 +447,9 @@ export default function AdminHome() {
           
           const [occRes, bRes, cRes, pRes, soRes, tRes] = await Promise.all([
             fetch("/api/dashboard/occupancy", fetchOptions),
-            fetch(`/api/dashboard/bookings?days=${d}`, fetchOptions),
-            fetch(`/api/dashboard/checkins?days=${d}`, fetchOptions),
-            fetch(`/api/dashboard/payments?days=${d}`, fetchOptions),
+            fetch(`/api/dashboard/bookings?days=${daysRange}`, fetchOptions),
+            fetch(`/api/dashboard/checkins?days=${daysRange}`, fetchOptions),
+            fetch(`/api/dashboard/payments?days=${daysRange}`, fetchOptions),
             fetch("/api/dashboard/service-orders", fetchOptions),
             fetch("/api/dashboard/tasks", fetchOptions),
           ]);
@@ -447,25 +520,6 @@ export default function AdminHome() {
           
           console.error('Dashboard fetch error:', err);
           setError(`Không tải được dữ liệu: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
-          
-        // Fallback to mock data
-        console.log('Using fallback mock data...');
-        const fallbackData = getDashboardData();
-        const fallbackSeries = getTimeSeriesData(Number(range));
-        
-        setKpis({ 
-          totalRooms: fallbackData.occupancy.total, 
-          occupiedRooms: fallbackData.occupancy.occupied, 
-          pendingBookings: fallbackData.bookings.pending, 
-          paymentsToday: fallbackData.payments.count, 
-          revenueToday: fallbackData.payments.sum, 
-          tasksTodo: fallbackData.tasks.todo + fallbackData.tasks.in_progress 
-        });
-        setBookingsSeries(fallbackSeries.map(s => ({ date: s.date, count: s.bookings })));
-        setCheckinsSeries(fallbackSeries.map(s => ({ date: s.date, count: s.checkins })));
-        setPaymentsSeries(fallbackSeries.map(s => ({ date: s.date, sum: s.payments })));
-        setServicesTop(fallbackData.services.top);
-        setTasksSummary(fallbackData.tasks);
         } finally {
           // Only set loading to false if not aborted
           if (!ac.signal.aborted) {
@@ -481,20 +535,39 @@ export default function AdminHome() {
       clearTimeout(timeoutId);
       ac.abort();
     };
-  }, [range, refreshTrigger]);
+  }, [dateRange, refreshTrigger]);
 
   const occupancyPercent = useMemo(() => Math.round((kpis.occupiedRooms / Math.max(1, kpis.totalRooms)) * 100), [kpis]);
+  
+  const daysRange = useMemo(() => {
+    return Math.ceil((new Date(dateRange.toDate).getTime() - new Date(dateRange.fromDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  }, [dateRange]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">Tổng quan hệ thống quản lý khách sạn</p>
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-4 sm:px-6 py-4 sm:py-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  ADMIN - Dashboard
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-1">
+                  Tổng quan hệ thống quản lý nhà công vụ thông minh
+                </p>
+              </div>
+            </div>
           </div>
-          <RangeSelector range={range} setRange={setRange} />
+          <div className="flex-shrink-0">
+            <DateRangeSelector dateRange={dateRange} setDateRange={setDateRange} />
+          </div>
         </div>
       </div>
 
@@ -615,7 +688,7 @@ export default function AdminHome() {
 
         {/* Bottom Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card title={`Xu hướng đặt phòng (${range} ngày)`}>
+          <Card title={`Xu hướng đặt phòng (${daysRange} ngày)`}>
             {loading ? <Skeleton className="h-64" /> : (
               <div className="space-y-4">
                 <LineChart series={bookingsSeries} color="#3b82f6" />
@@ -637,7 +710,7 @@ export default function AdminHome() {
             )}
           </Card>
           
-          <Card title={`Lượt check-in (${range} ngày)`}>
+          <Card title={`Lượt check-in (${daysRange} ngày)`}>
             {loading ? <Skeleton className="h-64" /> : (
               <div className="space-y-4">
                 <AreaChart series={checkinsSeries} color="#10b981" />
@@ -660,8 +733,8 @@ export default function AdminHome() {
           </Card>
           
           <Card 
-            title={`Doanh thu thanh toán (${range} ngày)`} 
-            actions={<ExportCSV filename={`payments_${range}d.csv`} rows={paymentsSeries.map((s) => ({ Ngày: fmtDate(s.date), DoanhThu: s.sum }))} />}
+            title={`Doanh thu thanh toán (${daysRange} ngày)`} 
+            actions={<ExportCSV filename={`payments_${daysRange}d.csv`} rows={paymentsSeries.map((s) => ({ Ngày: fmtDate(s.date), DoanhThu: s.sum }))} />}
           >
             {loading ? <Skeleton className="h-64" /> : (
               <div className="space-y-4">
@@ -686,7 +759,7 @@ export default function AdminHome() {
           
           <Card 
             title="Top dịch vụ được sử dụng" 
-            actions={<ExportCSV filename={`services_top_${range}d.csv`} rows={servicesTop} />}
+            actions={<ExportCSV filename={`services_top_${daysRange}d.csv`} rows={servicesTop} />}
           >
             {loading ? <Skeleton className="h-64" /> : (
               <div className="space-y-4">
@@ -711,22 +784,38 @@ export default function AdminHome() {
 
         {/* Quick Actions */}
         <Card title="Truy cập nhanh">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Link href="/admin/bookings" className="group flex flex-col items-center p-4 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:shadow-md transition-all">
-              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">📅</div>
-              <div className="text-sm font-medium text-gray-900">Đặt phòng</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <Link href="/admin/bookings" className="group flex flex-col items-center p-6 rounded-2xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-100 hover:from-blue-100 hover:to-indigo-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200 shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">Đặt phòng</div>
             </Link>
-            <Link href="/admin/checkins" className="group flex flex-col items-center p-4 rounded-xl border border-gray-200 bg-white hover:border-green-300 hover:shadow-md transition-all">
-              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🏠</div>
-              <div className="text-sm font-medium text-gray-900">Check-in</div>
+            <Link href="/admin/checkins" className="group flex flex-col items-center p-6 rounded-2xl border border-gray-200 bg-gradient-to-br from-green-50 to-emerald-100 hover:from-green-100 hover:to-emerald-200 hover:border-green-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200 shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                </svg>
+              </div>
+              <div className="text-sm font-semibold text-gray-900 group-hover:text-green-700 transition-colors">Check-in</div>
             </Link>
-            <Link href="/admin/payments" className="group flex flex-col items-center p-4 rounded-xl border border-gray-200 bg-white hover:border-yellow-300 hover:shadow-md transition-all">
-              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">💳</div>
-              <div className="text-sm font-medium text-gray-900">Thanh toán</div>
+            <Link href="/admin/payments" className="group flex flex-col items-center p-6 rounded-2xl border border-gray-200 bg-gradient-to-br from-yellow-50 to-amber-100 hover:from-yellow-100 hover:to-amber-200 hover:border-yellow-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200 shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Thanh toán</div>
             </Link>
-            <Link href="/admin/tasks" className="group flex flex-col items-center p-4 rounded-xl border border-gray-200 bg-white hover:border-purple-300 hover:shadow-md transition-all">
-              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">✅</div>
-              <div className="text-sm font-medium text-gray-900">Công việc</div>
+            <Link href="/admin/tasks" className="group flex flex-col items-center p-6 rounded-2xl border border-gray-200 bg-gradient-to-br from-purple-50 to-violet-100 hover:from-purple-100 hover:to-violet-200 hover:border-purple-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200 shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <div className="text-sm font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">Công việc</div>
             </Link>
           </div>
         </Card>
@@ -797,8 +886,11 @@ function ExportCSV({ filename, rows }: { filename: string; rows: Record<string, 
   return (
     <button 
       onClick={download} 
-      className="flex items-center gap-2 h-8 rounded-md border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+      className="flex items-center gap-2 h-9 rounded-xl border border-gray-300 bg-white/80 backdrop-blur-sm px-4 text-xs font-semibold text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
     >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
       Xuất Excel
     </button>
   );

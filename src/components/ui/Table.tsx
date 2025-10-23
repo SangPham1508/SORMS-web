@@ -8,14 +8,14 @@ export function Table({ children, className }: { children: React.ReactNode; clas
 
 export function THead({ children }: { children: React.ReactNode }) {
   return (
-    <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+    <thead className="bg-gray-50 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
       {children}
     </thead>
   );
 }
 
 export function TBody({ children }: { children: React.ReactNode }) {
-  return <tbody className="divide-y divide-gray-200 bg-white text-xs sm:text-sm text-gray-900">{children}</tbody>;
+  return <tbody className="divide-y divide-gray-200 bg-white text-xs sm:text-sm text-gray-900 text-center">{children}</tbody>;
 }
 
 
