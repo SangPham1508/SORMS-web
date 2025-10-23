@@ -202,7 +202,7 @@ export default function RoomsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 mt-4">
         {/* Mobile: 2 hàng */}
         <div className="lg:hidden space-y-3">
           {/* Hàng 1: Tìm kiếm và Sắp xếp */}
@@ -268,7 +268,7 @@ export default function RoomsPage() {
         </div>
 
         {/* Desktop: 1 hàng */}
-        <div className="hidden lg:flex flex-row gap-3 items-center">
+        <div className="hidden lg:flex flex-row gap-4 items-center">
           {/* Tìm kiếm */}
           <div className="flex-1 min-w-0">
             <div className="relative">

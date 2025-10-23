@@ -86,21 +86,35 @@ export default function CheckinsPage() {
   return (
     <>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">Quản lý check-in</h1>
-            <p className="text-xs sm:text-sm lg:text-base text-gray-600 mt-1">Theo dõi và quản lý check-in/check-out</p>
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-bold text-gray-900 truncate">Check-in</h1>
+              <p className="text-xs text-gray-500">{filtered.length} check-in</p>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <Button className="h-8 sm:h-9 px-3 sm:px-4 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-xs sm:text-sm whitespace-nowrap" onClick={openCreate}>
-              Tạo check-in
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={openCreate} 
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 text-sm flex-shrink-0"
+            >
+              <svg className="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span className="hidden sm:inline">Tạo check-in</span>
+              <span className="sm:hidden">Tạo</span>
             </Button>
             <button
               type="button"
               aria-label="Xuất Excel"
               title="Xuất Excel"
-              className="h-8 sm:h-9 px-2 sm:px-3 rounded-md border border-gray-300 bg-white text-xs sm:text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+              className="h-8 px-2 rounded-md border border-gray-300 bg-white text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-1"
               onClick={() => {
                 const headers = ['ID','Booking','Khach','Phong','Checkin','Checkout','FaceRef']
                 const csv = [headers.join(','), ...filtered.map(r => [
@@ -121,14 +135,18 @@ export default function CheckinsPage() {
                 URL.revokeObjectURL(url)
               }}
             >
-               Xuất excel
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="hidden sm:inline">Excel</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
+      <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="space-y-3">
         {flash && (
           <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${flash.type==='success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
             {flash.text}
@@ -240,6 +258,8 @@ export default function CheckinsPage() {
           </div>
         </CardBody>
       </Card>
+        </div>
+      </div>
 
       {/* Modal chi tiết */}
       <Modal open={detailOpen} onClose={() => setDetailOpen(false)} title="Chi tiết check‑in">
@@ -319,7 +339,6 @@ export default function CheckinsPage() {
       >
         <div className="text-sm text-gray-700">Bạn có chắc muốn xóa bản ghi check‑in này?        </div>
       </Modal>
-      </div>
     </>
   );
 }

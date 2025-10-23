@@ -189,8 +189,8 @@ export default function RoomTypesPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="space-y-6">
+      <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="space-y-3">
           {/* Flash Messages */}
           {flash && (
             <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
@@ -204,11 +204,10 @@ export default function RoomTypesPage() {
 
           {/* Filters */}
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
-            {/* Mobile: 2 hàng */}
+            {/* Mobile layout */}
             <div className="lg:hidden space-y-3">
-              {/* Hàng 1: Tìm kiếm và Sắp xếp */}
-              <div className="flex flex-row gap-2 items-center">
-                {/* Tìm kiếm */}
+              {/* Hàng 1: Tìm kiếm */}
+              <div className="flex flex-row items-center">
                 <div className="flex-1 min-w-0">
                   <div className="relative">
                     <Input
@@ -218,18 +217,33 @@ export default function RoomTypesPage() {
                       className="w-full pl-3 pr-8 py-2 text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
                       </svg>
                     </div>
                   </div>
                 </div>
-                
+              </div>
+
+              {/* Hàng 2: Sắp xếp và Thứ tự */}
+              <div className="flex flex-row gap-2 items-center">
                 {/* Sắp xếp */}
-                <div className="w-32 flex-shrink-0">
+                <div className="flex-1">
                   <select
                     value={sortKey}
-                    onChange={(e) => setSortKey(e.target.value as 'code' | 'name' | 'maxOccupancy')}
+                    onChange={(e) =>
+                      setSortKey(e.target.value as "code" | "name" | "maxOccupancy")
+                    }
                     className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="code">Code</option>
@@ -237,12 +251,9 @@ export default function RoomTypesPage() {
                     <option value="maxOccupancy">Số người</option>
                   </select>
                 </div>
-              </div>
-              
-              {/* Hàng 2: Thứ tự */}
-              <div className="flex flex-row gap-2 items-center">
+
                 {/* Thứ tự */}
-                <div className="w-28 flex-shrink-0">
+                <div className="w-32 flex-shrink-0">
                   <select
                     value={sortOrder}
                     onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
@@ -255,8 +266,8 @@ export default function RoomTypesPage() {
               </div>
             </div>
 
-            {/* Desktop: 1 hàng */}
-            <div className="hidden lg:flex flex-row gap-3 items-center">
+            {/* Desktop layout */}
+            <div className="hidden lg:flex flex-row gap-2 items-center">
               {/* Tìm kiếm */}
               <div className="flex-1 min-w-0">
                 <div className="relative">
@@ -301,14 +312,15 @@ export default function RoomTypesPage() {
             </div>
           </div>
 
+
           {/* Table */}
-          <div className="px-4 py-6">
+          <div className="px-4 py-3">
             <div className="max-w-7xl mx-auto">
               <Card className="bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-xl rounded-2xl overflow-hidden">
                 <CardHeader className="bg-gray-50 border-b border-gray-200 px-6 py-3">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-gray-900">Danh sách loại phòng</h2>
-                    <span className="text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">{filtered.length} loại phòng</span>
+                    <h2 className="text-lg text-left font-bold text-gray-900">Danh sách loại phòng</h2>
+                    <span className="text-sm text-right font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">{filtered.length} loại phòng</span>
                   </div>
                 </CardHeader>
                 <CardBody className="p-0">

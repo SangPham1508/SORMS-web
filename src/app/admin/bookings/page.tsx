@@ -237,25 +237,35 @@ export default function BookingsPage() {
   return (
     <>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Đặt phòng</h1>
-              <p className="text-sm lg:text-base text-gray-600 mt-1">Quản lý các đặt phòng trong hệ thống</p>
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
-            <div className="flex items-center gap-3">
-              <Button onClick={openCreate}>
-                Thêm đặt phòng mới
-              </Button>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-bold text-gray-900 truncate">Đặt phòng</h1>
+              <p className="text-xs text-gray-500">{filtered.length} đặt phòng</p>
             </div>
           </div>
+          <Button 
+            onClick={openCreate} 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm flex-shrink-0"
+          >
+            <svg className="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span className="hidden sm:inline">Thêm đặt phòng</span>
+            <span className="sm:hidden">Thêm</span>
+          </Button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="space-y-6">
+      <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="space-y-3">
           {/* Flash Messages */}
           {flash && (
             <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
@@ -268,136 +278,228 @@ export default function BookingsPage() {
           )}
 
           {/* Filters */}
-          <Card>
-  <CardBody className="p-4">
-    <div className="flex flex-wrap items-end gap-4">
-      {/* Tìm kiếm */}
-      <div className="flex flex-col flex-1 min-w-[280px]">
-        <label className="text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
-        <Input
-          placeholder="Tìm theo code, tên khách, phòng..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full"
-        />
-      </div>
+          <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+            {/* Mobile layout */}
+            <div className="lg:hidden space-y-3">
+              {/* Hàng 1: Tìm kiếm */}
+              <div className="flex flex-row items-center">
+                <div className="flex-1 min-w-0">
+                  <div className="relative">
+                    <Input
+                      placeholder="Tìm kiếm..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      className="w-full pl-3 pr-8 py-2 text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-      {/* Từ ngày */}
-      <div className="flex flex-col w-[150px]">
-        <label className="text-sm font-medium text-gray-700 mb-1">Từ ngày</label>
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="w-full"
-        />
-      </div>
+              {/* Hàng 2: Ngày tháng */}
+              <div className="flex flex-row gap-2 items-center">
+                <div className="flex-1">
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Từ ngày"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Đến ngày"
+                  />
+                </div>
+              </div>
 
-      {/* Đến ngày */}
-      <div className="flex flex-col w-[150px]">
-        <label className="text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="w-full"
-        />
-      </div>
+              {/* Hàng 3: Sắp xếp và Thứ tự */}
+              <div className="flex flex-row gap-2 items-center">
+                <div className="flex-1">
+                  <select
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as 'id' | 'code' | 'checkin' | 'checkout')}
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="code">Code</option>
+                    <option value="checkin">Check-in</option>
+                    <option value="checkout">Check-out</option>
+                  </select>
+                </div>
+                <div className="w-32 flex-shrink-0">
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="asc">Tăng dần</option>
+                    <option value="desc">Giảm dần</option>
+                  </select>
+                </div>
+              </div>
 
-      {/* Sắp xếp */}
-      <div className="flex flex-col w-[140px]">
-        <label className="text-sm font-medium text-gray-700 mb-1">Sắp xếp</label>
-        <select
-          value={sortKey}
-          onChange={(e) =>
-            setSortKey(e.target.value as 'id' | 'code' | 'checkin' | 'checkout')
-          }
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="code">Code</option>
-          <option value="checkin">Check-in</option>
-          <option value="checkout">Check-out</option>
-        </select>
-      </div>
+              {/* Hàng 4: Trạng thái */}
+              <div className="flex flex-row items-center">
+                <div className="flex-1">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as 'ALL' | BookingStatus)}
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    {statusOptions.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
 
-      {/* Thứ tự */}
-      <div className="flex flex-col w-[120px]">
-        <label className="text-sm font-medium text-gray-700 mb-1">Thứ tự</label>
-        <select
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="asc">Tăng dần</option>
-          <option value="desc">Giảm dần</option>
-        </select>
-      </div>
-
-      {/* Trạng thái */}
-      <div className="flex flex-col w-[180px]">
-        <label className="text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-        <select
-          value={filterStatus}
-          onChange={(e) =>
-            setFilterStatus(e.target.value as 'ALL' | BookingStatus)
-          }
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="ALL">Tất cả trạng thái</option>
-          {statusOptions.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  </CardBody>
-</Card>
+            {/* Desktop layout */}
+            <div className="hidden lg:flex flex-row gap-4 items-center">
+              {/* Tìm kiếm */}
+              <div className="flex-1 min-w-0">
+                <div className="relative">
+                  <Input
+                    placeholder="Tìm kiếm đặt phòng..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="w-full pl-4 pr-10 py-2 text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Từ ngày */}
+              <div className="w-40 flex-shrink-0">
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              {/* Đến ngày */}
+              <div className="w-40 flex-shrink-0">
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              {/* Sắp xếp */}
+              <div className="w-36 flex-shrink-0">
+                <select
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as 'id' | 'code' | 'checkin' | 'checkout')}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="code">Theo Code</option>
+                  <option value="checkin">Theo Check-in</option>
+                  <option value="checkout">Theo Check-out</option>
+                </select>
+              </div>
+              
+              {/* Thứ tự */}
+              <div className="w-28 flex-shrink-0">
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="asc">Tăng dần</option>
+                  <option value="desc">Giảm dần</option>
+                </select>
+              </div>
+              
+              {/* Trạng thái */}
+              <div className="w-36 flex-shrink-0">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as 'ALL' | BookingStatus)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="ALL">Tất cả</option>
+                  {statusOptions.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
 
 
 
           {/* Table */}
           <Card>
-            <CardHeader>
-              <div className="text-xs sm:text-sm text-gray-600">Tổng: {filtered.length} đặt phòng</div>
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Danh sách đặt phòng</h2>
+                <div className="text-sm text-gray-600">{filtered.length} đặt phòng</div>
+              </div>
             </CardHeader>
             <CardBody className="p-0">
               <div className="overflow-x-auto">
                 <table className="min-w-[800px] w-full table-fixed text-xs sm:text-sm">
                   <colgroup>
-                    <col className="w-[15%]" />
-                    <col className="w-[20%]" />
-                    <col className="w-[15%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[8%]" />
+                    <col className="w-[5%]" />
                     <col className="w-[10%]" />
-                    <col className="w-[8%]" />
+                    <col className="w-[5%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[5%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[15%]" />
                   </colgroup>
                   <thead>
                     <tr className="bg-gray-200 text-gray-700 text-xs sm:text-sm">
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Code</th>
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Khách hàng</th>
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Phòng</th>
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Check-in</th>
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Check-out</th>
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Số khách</th>
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Trạng thái</th>
-                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold">Thao tác</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Code</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Khách hàng</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Phòng</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Check-in</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Check-out</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Số khách</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Trạng thái</th>
+                      <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.slice((page - 1) * size, page * size).map((row) => (
                       <tr key={row.id} className="hover:bg-gray-50">
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium">{row.code}</td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm">{row.userName || `User ${row.userId}`}</td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm">{getRoomName(row.roomId)}</td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm">{row.checkinDate}</td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm">{row.checkoutDate}</td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm">{row.numGuests}</td>
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-center">{row.code}</td>
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-center">{row.userName || `User ${row.userId}`}</td>
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-center">{getRoomName(row.roomId)}</td>
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-center">{row.checkinDate}</td>
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-center">{row.checkoutDate}</td>
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-center">{row.numGuests}</td>
                         <td className="px-2 sm:px-3 py-1.5 sm:py-2">{renderStatusChip(row.status)}</td>
-                        <td className="px-2 sm:px-3 py-1.5 sm:py-2">
+                        <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-center">
                           <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 justify-end">
                             <Button
                               variant="secondary"
@@ -457,7 +559,7 @@ export default function BookingsPage() {
                 </table>
               </div>
 
-              <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs sm:text-sm">
+              <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
                   <span>Hàng:</span>
                   <select
