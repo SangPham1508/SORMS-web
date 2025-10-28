@@ -55,12 +55,10 @@ export default function OfficeBookingsPage() {
 
   const handleApprove = async (booking: BookingRequest) => {
     try {
-      const response = await apiClient.updateBooking(booking.id, {
-        ...booking,
-        status: 'APPROVED'
-      });
-      
-      if (response.success) {
+      const res = await fetch(`/api/system/bookings?action=approve&id=${booking.id}`, {
+        method: 'POST'
+      })
+      if (res.ok) {
         setFlash({ type: 'success', text: 'Đã duyệt đặt phòng thành công!' });
         setApprovalModalOpen(false);
         setSelectedBooking(null);
@@ -74,11 +72,37 @@ export default function OfficeBookingsPage() {
           'CONFIRMED'
         );
       } else {
-        setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi duyệt đặt phòng' });
+        const err = await res.text()
+        setFlash({ type: 'error', text: err || 'Có lỗi xảy ra khi duyệt đặt phòng' });
       }
     } catch (error) {
       setFlash({ type: 'error', text: 'Có lỗi xảy ra khi duyệt đặt phòng' });
       console.error('Booking approval error:', error);
+    }
+  };
+
+  const handleCheckin = async (booking: BookingRequest) => {
+    try {
+      const res = await fetch(`/api/system/bookings?action=checkin&id=${booking.id}`, {
+        method: 'POST'
+      })
+      if (res.ok) {
+        setFlash({ type: 'success', text: 'Check-in thành công!' });
+        refetchBookings();
+        // Create notification
+        createBookingNotification(
+          booking.id,
+          booking.guestName,
+          `${booking.building} - ${booking.roomNumber}`,
+          'CONFIRMED'
+        );
+      } else {
+        const err = await res.text()
+        setFlash({ type: 'error', text: err || 'Có lỗi xảy ra khi check-in' });
+      }
+    } catch (error) {
+      setFlash({ type: 'error', text: 'Có lỗi xảy ra khi check-in' });
+      console.error('Booking checkin error:', error);
     }
   };
 
@@ -265,6 +289,17 @@ export default function OfficeBookingsPage() {
                                 className="text-xs"
                               >
                                 Từ chối
+                              </Button>
+                            </div>
+                          )}
+                          {booking.status === 'APPROVED' && (
+                            <div className="flex space-x-2">
+                              <Button
+                                onClick={() => handleCheckin(booking)}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                Check-in
                               </Button>
                             </div>
                           )}

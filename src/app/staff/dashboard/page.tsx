@@ -33,6 +33,7 @@ export default function StaffPage() {
   }, []);
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -42,6 +43,8 @@ export default function StaffPage() {
   const [filterPriority, setFilterPriority] = useState<'ALL' | 'LOW' | 'MEDIUM' | 'HIGH'>('ALL');
   const [flash, setFlash] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
 
   // Auto-hide success/error messages after a few seconds
   useEffect(() => {
@@ -53,6 +56,7 @@ export default function StaffPage() {
   // Load tasks from shared system API
   useEffect(() => {
     const loadTasks = async () => {
+      setLoading(true)
       try {
         const res = await fetch('/api/system/tasks')
         const sysTasks = await res.json()
@@ -69,12 +73,14 @@ export default function StaffPage() {
           priority: t.priority,
           status: statusMap[t.status] || 'PENDING',
           assignedBy: t.assigned_to,
-          dueDate: t.due_at.slice(0, 10),
+          dueDate: t.due_at?.slice(0, 10) || '',
           estimatedHours: 2,
           createdAt: new Date().toISOString()
         })))
       } catch (e) {
-        // ignore demo errors
+        setTasks([])
+      } finally {
+        setLoading(false)
       }
     }
     loadTasks()
@@ -201,6 +207,14 @@ export default function StaffPage() {
     
     // Create notification
     createTaskNotification(task.title, 'IN_PROGRESS', task.assignedBy);
+  };
+
+  const handleAdjustSchedule = (id: number) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    setSelectedTask(task);
+    setScheduleDate(task.dueDate);
+    setScheduleModalOpen(true);
   };
 
   const handleCompleteTask = (id: number) => {
@@ -339,13 +353,14 @@ export default function StaffPage() {
         </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Task filters" role="group">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Lọc theo trạng thái</label>
               <select 
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
                 value={filterStatus} 
                 onChange={(e) => setFilterStatus(e.target.value as any)}
+                aria-label="Lọc theo trạng thái"
               >
                 <option value="ALL">Tất cả</option>
                 <option value="PENDING">Chờ phản hồi</option>
@@ -360,6 +375,7 @@ export default function StaffPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
                 value={filterPriority} 
                 onChange={(e) => setFilterPriority(e.target.value as any)}
+                aria-label="Lọc theo ưu tiên"
               >
                 <option value="ALL">Tất cả</option>
                 <option value="HIGH">Cao</option>
@@ -381,7 +397,37 @@ export default function StaffPage() {
 
           {/* Tasks List */}
           <div className="space-y-4">
-            {filteredTasks.map((task) => (
+            {loading && (
+              <Card>
+                <CardBody>
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+            {!loading && filteredTasks.length === 0 && (
+              <Card>
+                <CardBody>
+                  <div className="text-center py-10 text-gray-600">
+                    <div className="mb-3">
+                      <svg className="w-10 h-10 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="text-sm">Không có công việc nào phù hợp bộ lọc.</div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+            {!loading && filteredTasks.map((task) => (
               <Card key={task.id} className={`${task.status === 'PENDING' ? 'ring-2 ring-yellow-200 bg-yellow-50' : ''}`}>
                 <CardBody>
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
@@ -441,6 +487,13 @@ export default function StaffPage() {
                           Hoàn thành
                         </Button>
                       )}
+                      <Button 
+                        variant="secondary"
+                        onClick={() => handleAdjustSchedule(task.id)}
+                        className="w-full sm:w-auto lg:w-full"
+                      >
+                        Điều chỉnh lịch
+                      </Button>
                     </div>
                   </div>
                 </CardBody>
@@ -538,6 +591,47 @@ export default function StaffPage() {
               </div>
             )}
           </div>
+        </Modal>
+
+        {/* Schedule Adjust Modal */}
+        <Modal
+          open={scheduleModalOpen}
+          onClose={() => setScheduleModalOpen(false)}
+          title="Điều chỉnh lịch làm việc"
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="secondary" 
+                onClick={() => setScheduleModalOpen(false)}
+              >
+                Hủy
+              </Button>
+              <Button 
+                onClick={async () => {
+                  if (!selectedTask) return;
+                  // Persist new schedule locally (demo). In real app, call API
+                  setTasks(prev => prev.map(t => t.id === selectedTask.id ? { ...t, dueDate: scheduleDate } : t))
+                  setScheduleModalOpen(false)
+                  setFlash({ type: 'success', text: 'Đã điều chỉnh lịch làm việc!' })
+                }}
+              >
+                Lưu
+              </Button>
+            </div>
+          }
+        >
+          {selectedTask && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hạn mới</label>
+                <Input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </Modal>
         </div>
       </div>

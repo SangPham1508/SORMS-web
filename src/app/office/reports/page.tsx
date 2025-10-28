@@ -91,10 +91,17 @@ export default function OfficeReportsPage() {
       worksheet.addRow(Object.values(row));
     });
 
-    // Auto-fit columns
-    worksheet.columns.forEach(column => {
-      column.width = 15;
-    });
+    // Auto-fit columns (guard when columns is undefined)
+    if (worksheet.columns && worksheet.columns.length > 0) {
+      worksheet.columns.forEach(column => {
+        column.width = 15;
+      });
+    } else if (data.length > 0) {
+      const colCount = Object.keys(data[0]).length;
+      for (let i = 1; i <= colCount; i++) {
+        worksheet.getColumn(i).width = 15;
+      }
+    }
 
     // Tạo buffer và download
     const buffer = await workbook.xlsx.writeBuffer();

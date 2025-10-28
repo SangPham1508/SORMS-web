@@ -16,12 +16,55 @@ const mock: Role[] = [
   { id: 3, code: "lecture", name: "Lecture", description: "Lecturer", isVisible: false },
   { id: 4, code: "staff", name: "Staff", description: "Employee", isVisible: true },
   { id: 5, code: "guest", name: "Guest", description: "Visitor", isVisible: false },
+  { id: 6, code: "manager", name: "Manager", description: "Department Manager", isVisible: true },
+  { id: 7, code: "accountant", name: "Accountant", description: "Finance & Billing", isVisible: true },
+  { id: 8, code: "cleaner", name: "Cleaner", description: "Housekeeping", isVisible: true },
+  { id: 9, code: "technician", name: "Technician", description: "Maintenance Technician", isVisible: true },
+  { id: 10, code: "auditor", name: "Auditor", description: "Internal Audit", isVisible: false },
+  { id: 11, code: "hr", name: "HR", description: "Human Resources", isVisible: true },
+  { id: 12, code: "security", name: "Security", description: "Security Staff", isVisible: true },
+  { id: 13, code: "sales", name: "Sales", description: "Sales & Marketing", isVisible: true },
+  { id: 14, code: "reception", name: "Reception", description: "Front Desk", isVisible: true },
+  { id: 15, code: "it", name: "IT", description: "IT Support", isVisible: true },
 ];
 
 export default function RolesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<Role[]>(mock);
+  // Demo/Live mode & fetch
+  const [isDemoMode, setIsDemoMode] = useState(true)
+  const [loadingLive, setLoadingLive] = useState(false)
+
+  useEffect(() => {
+    if (isDemoMode) {
+      setRows(mock)
+      return
+    }
+    let aborted = false
+    const fetchLive = async () => {
+      setLoadingLive(true)
+      setRows([])
+      try {
+        const res = await fetch('/api/system/roles', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        if (aborted) return
+        if (Array.isArray(data?.items)) {
+          setRows(data.items)
+        } else {
+          setRows([])
+        }
+      } catch (e) {
+        if (aborted) return
+        setRows([])
+      } finally {
+        if (!aborted) setLoadingLive(false)
+      }
+    }
+    fetchLive()
+    return () => { aborted = true }
+  }, [isDemoMode])
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -146,21 +189,43 @@ export default function RolesPage() {
 
   return (
     <>
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">Quản lý phân quyền</h1>
-            <p className="text-xs sm:text-sm lg:text-base text-gray-600 mt-1">Theo dõi và quản lý các vai trò trong hệ thống</p>
+      {/* Header - match admin style with Demo/Live toggle */}
+      <div className="bg-white border-b border-gray-200 px-3 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-bold text-gray-900 truncate">Phân quyền</h1>
+              <p className="text-sm text-gray-500">{filtered.length} vai trò</p>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <Button className="h-8 sm:h-9 px-3 sm:px-4 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-xs sm:text-sm whitespace-nowrap" onClick={openCreate}>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => setIsDemoMode(!isDemoMode)}
+              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
+                isDemoMode 
+                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="hidden sm:inline ml-1">
+                {isDemoMode ? 'Demo Mode' : 'Live Mode'}
+              </span>
+            </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm flex-shrink-0 rounded-lg" onClick={openCreate}>
               Tạo vai trò
             </Button>
             <button
               aria-label="Xuất Excel (CSV)"
               title="Xuất Excel (CSV)"
-              className="h-8 sm:h-9 px-2 sm:px-3 rounded-md border border-gray-300 bg-white text-xs sm:text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+              className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
               onClick={() => {
                 const csv = [['ID', 'Code', 'Tên', 'Mô tả', 'Hiển thị'], ...filtered.map(r => [r.id, r.code, r.name, r.description || '', r.isVisible ? 'Có' : 'Không'])]
                 const blob = new Blob([csv.map(r => r.join(',')).join('\n')], { type: 'text/csv' })
@@ -179,54 +244,95 @@ export default function RolesPage() {
       </div>
 
       {/* Content */}
-      <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
+      <div className="w-full px-4 py-3">
+        <div className="space-y-3">
         {flash && (
           <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${flash.type==='success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
             {flash.text}
           </div>
         )}
 
+          {/* Mode Indicator */}
+          <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
+            isDemoMode 
+              ? 'bg-orange-50 border-orange-200 text-orange-800' 
+              : 'bg-green-50 border-green-200 text-green-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-semibold">
+                {isDemoMode ? 'Chế độ Demo' : 'Chế độ Live'}
+              </span>
+              <span className="text-xs opacity-75">
+                {isDemoMode 
+                  ? 'Đang sử dụng dữ liệu ảo để demo' 
+                  : 'Đang kết nối với API thật'
+                }
+              </span>
+              {loadingLive && (
+                <div className="flex items-center gap-1 ml-auto">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                  <span className="text-xs">Đang tải...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
-          <Input 
-            className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm" 
-            placeholder="Tìm theo code, tên..." 
-            value={query} 
-            onChange={(e) => setQuery(e.target.value)} 
-          />
-        </div>
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Sắp xếp</label>
-          <div className="flex gap-2">
-            <select 
-              className="h-8 sm:h-9 rounded-md border border-gray-300 bg-white px-2 sm:px-3 text-xs sm:text-sm flex-1" 
-              value={sortKey} 
-              onChange={(e) => setSortKey(e.target.value as any)}
-            >
-              <option value="code">Code</option>
-              <option value="name">Tên</option>
-              <option value="id">ID</option>
-            </select>
-            <select 
-              className="h-8 sm:h-9 rounded-md border border-gray-300 bg-white px-2 sm:px-3 text-xs sm:text-sm flex-1" 
-              value={sortOrder} 
-              onChange={(e) => setSortOrder(e.target.value as any)}
-            >
-              <option value="asc">Tăng dần</option>
-              <option value="desc">Giảm dần</option>
-            </select>
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 rounded-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
+            <div className="relative">
+              <Input 
+                className="w-full h-9 pl-3 pr-9 text-sm border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                placeholder="Tìm theo code, tên..." 
+                value={query} 
+                onChange={(e) => setQuery(e.target.value)} 
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Sắp xếp</label>
+            <div className="flex gap-2">
+              <select 
+                className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm flex-1" 
+                value={sortKey} 
+                onChange={(e) => setSortKey(e.target.value as any)}
+              >
+                <option value="code">Code</option>
+                <option value="name">Tên</option>
+                <option value="id">ID</option>
+              </select>
+              <select 
+                className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm flex-1" 
+                value={sortOrder} 
+                onChange={(e) => setSortOrder(e.target.value as any)}
+              >
+                <option value="asc">Tăng dần</option>
+                <option value="desc">Giảm dần</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="text-xs sm:text-sm text-gray-600">Tổng: {filtered.length} vai trò</div>
+      <Card className="bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-xl rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gray-50 border-b border-gray-200 px-6 py-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg text-left font-bold text-gray-900">Danh sách vai trò</h2>
+            <span className="text-sm text-right font-semibold text-blue-700 bg-blue-100 px-3 py-1 rounded-full">{filtered.length} vai trò</span>
+          </div>
         </CardHeader>
-        <CardBody>
-          <div className="overflow-x-auto">
+        <CardBody className="p-0">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="min-w-[800px] w-full text-xs sm:text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
@@ -255,20 +361,9 @@ export default function RolesPage() {
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-500 truncate" title={r.description}>{r.description}</td>
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2">
                       <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                        <Button 
-                          variant="secondary" 
-                          onClick={() => openEdit(r)}
-                          className="h-6 sm:h-8 px-2 sm:px-3 text-xs"
-                        >
-                          Sửa
-                        </Button>
-                        <Button 
-                          variant="danger" 
-                          onClick={() => handleOpenDelete(r)}
-                          className="h-6 sm:h-8 px-2 sm:px-3 text-xs"
-                        >
-                          Xóa
-                        </Button>
+                        <Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => { setSelected(r); setDetailOpen(true); }}>Xem</Button>
+                        <Button className="h-8 px-3 text-xs" onClick={() => openEdit(r)}>Sửa</Button>
+                        <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => handleOpenDelete(r)}>Xóa</Button>
                       </div>
                     </td>
                   </tr>
@@ -277,7 +372,45 @@ export default function RolesPage() {
             </table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm">
+          {/* Mobile list */}
+          <div className="lg:hidden p-3 space-y-3">
+            {filtered.slice((page - 1) * size, (page - 1) * size + size).map((r) => (
+              <div key={r.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900 truncate">{r.code}</div>
+                        <div className="text-xs text-gray-600 truncate">{r.name}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Mô tả</span>
+                    <span className="font-medium truncate max-w-[60%] text-right" title={r.description}>{r.description || '—'}</span>
+                  </div>
+                </div>
+
+                <div className="px-3 py-3 bg-gray-50 border-t border-gray-100">
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="secondary" className="h-10 text-xs font-medium px-2" onClick={() => { setSelected(r); setDetailOpen(true); }}>Xem</Button>
+                    <Button className="h-10 text-xs font-medium px-2" onClick={() => openEdit(r)}>Sửa</Button>
+                    <Button variant="danger" className="h-10 text-xs font-medium px-2" onClick={() => handleOpenDelete(r)}>Xóa</Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs sm:text-sm">
             <div className="flex items-center gap-2 text-xs sm:text-sm">
                 <span>Hàng:</span>
                 <select 
@@ -291,24 +424,10 @@ export default function RolesPage() {
                 </select>
                 <span className="text-gray-500">trên {filtered.length}</span>
               </div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm">
-                <Button 
-                  variant="secondary" 
-                  className="h-7 sm:h-8 px-2 sm:px-3 text-xs" 
-                  disabled={page === 1} 
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                >
-                  Trước
-                </Button>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Button variant="secondary" className="h-7 sm:h-8 px-2 sm:px-3 text-xs" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Trước</Button>
                 <span className="px-2">Trang {page} / {Math.max(1, Math.ceil(filtered.length / size))}</span>
-                <Button 
-                  variant="secondary" 
-                  className="h-7 sm:h-8 px-2 sm:px-3 text-xs" 
-                  disabled={page >= Math.ceil(filtered.length / size)} 
-                  onClick={() => setPage(p => Math.min(Math.ceil(filtered.length / size), p + 1))}
-                >
-                  Sau
-                </Button>
+                <Button variant="secondary" className="h-7 sm:h-8 px-2 sm:px-3 text-xs" disabled={page >= Math.ceil(filtered.length / size)} onClick={() => setPage(p => Math.min(Math.ceil(filtered.length / size), p + 1))}>Sau</Button>
               </div>
             </div>
         </CardBody>
@@ -336,6 +455,21 @@ export default function RolesPage() {
         }
       >
         <div className="space-y-4">
+          {/* Header giống bookings */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 border border-blue-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{form.code || '—'}</h3>
+                <div className="text-sm text-gray-600 truncate">{form.name || '—'}</div>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
             <Input
@@ -384,14 +518,43 @@ export default function RolesPage() {
       {/* Detail Modal */}
       <Modal open={detailOpen} onClose={() => setDetailOpen(false)} title="Chi tiết vai trò">
         {selected ? (
-          <div className="space-y-2 text-sm">
-            <div><span className="font-medium">ID:</span> {selected.id}</div>
-            <div><span className="font-medium">Code:</span> {selected.code}</div>
-            <div><span className="font-medium">Tên:</span> {selected.name}</div>
-            <div><span className="font-medium">Mô tả:</span> {selected.description || "—"}</div>
+          <div className="space-y-4 p-1">
+            {/* Header giống bookings */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 border border-blue-200">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{selected.code}</h3>
+                  </div>
+                  <div className="text-sm text-gray-600 truncate">{selected.name}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Thông tin chi tiết */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg border border-gray-200 p-3 bg-white">
+                <div className="text-gray-500">ID</div>
+                <div className="font-medium text-gray-900">{selected.id}</div>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-3 bg-white">
+                <div className="text-gray-500">Hiển thị</div>
+                <div className="font-medium text-gray-900">{selected.isVisible ? 'Có' : 'Không'}</div>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-3 bg-white sm:col-span-2">
+                <div className="text-gray-500">Mô tả</div>
+                <div className="mt-1 text-gray-900">{selected.description || '—'}</div>
+              </div>
+            </div>
           </div>
         ) : null}
       </Modal>
+      </div>
       </div>
     </>
   );

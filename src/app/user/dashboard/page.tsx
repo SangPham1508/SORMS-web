@@ -95,7 +95,8 @@ export default function UserPage() {
     }
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'rooms' | 'booking' | 'services' | 'payments'>('rooms');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'booking' | 'services' | 'payments' | 'history' | 'calendar'>('rooms');
+  const [loading, setLoading] = useState({ rooms: true, bookings: true, services: true });
   
   // Determine if user is lecturer
   const [isLecturer, setIsLecturer] = useState(false);
@@ -111,6 +112,10 @@ export default function UserPage() {
   const { data: roomsData, loading: roomsLoading, error: roomsError, refetch: refetchRooms } = useRooms();
   const { data: bookingsData, loading: bookingsLoading, error: bookingsError, refetch: refetchBookings } = useBookings();
   const { data: servicesData, loading: servicesLoading, error: servicesError, refetch: refetchServices } = useServices();
+
+  useEffect(() => {
+    setLoading({ rooms: roomsLoading, bookings: bookingsLoading, services: servicesLoading })
+  }, [roomsLoading, bookingsLoading, servicesLoading])
 
   // Transform API data to match component types
   const rooms: Room[] = (roomsData as any)?.data || [];
@@ -258,22 +263,42 @@ export default function UserPage() {
         serviceName: newServiceOrder.serviceName,
         quantity: newServiceOrder.quantity,
         unitPrice: newServiceOrder.unitPrice,
-        totalPrice: newServiceOrder.quantity * newServiceOrder.unitPrice,
-        status: 'PENDING',
-        orderDate: new Date().toISOString()
+        totalPrice: newServiceOrder.quantity * newServiceOrder.unitPrice
       };
 
-      const response = await apiClient.createService(serviceOrderData);
+      const res = await fetch('/api/system/orders?action=cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serviceOrderData)
+      })
       
-      if (response.success) {
+      if (res.ok) {
         setServiceModalOpen(false);
         setNewServiceOrder({ serviceName: '', quantity: 1, unitPrice: 0 });
         setFlash({ type: 'success', text: 'Đặt dịch vụ thành công!' });
         
         // Refresh service orders data
         refetchServices();
+        if (serviceOrderData.totalPrice > 0) {
+          try {
+            const payRes = await fetch('/api/system/payments?action=create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ amount: serviceOrderData.totalPrice, description: `Thanh toán dịch vụ: ${serviceOrderData.serviceName}` })
+            })
+            if (!payRes.ok) {
+              const errText = await payRes.text()
+              setFlash({ type: 'error', text: errText || 'Không thể tạo giao dịch thanh toán' })
+            } else {
+              setFlash({ type: 'success', text: 'Đã tạo giao dịch thanh toán cho dịch vụ' })
+            }
+          } catch (e) {
+            setFlash({ type: 'error', text: 'Không thể tạo giao dịch thanh toán' })
+          }
+        }
       } else {
-        setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi đặt dịch vụ' });
+        const err = await res.text()
+        setFlash({ type: 'error', text: err || 'Có lỗi xảy ra khi đặt dịch vụ' });
       }
     } catch (error) {
       setFlash({ type: 'error', text: 'Có lỗi xảy ra khi đặt dịch vụ' });
@@ -412,7 +437,7 @@ export default function UserPage() {
 
           {/* Tabs */}
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex space-x-8" role="tablist" aria-label="User sections">
               <button
                 onClick={() => setActiveTab('rooms')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -420,6 +445,8 @@ export default function UserPage() {
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                role="tab"
+                aria-selected={activeTab === 'rooms'}
               >
                 Phòng có sẵn ({rooms.filter(r => r.status === 'AVAILABLE').length})
               </button>
@@ -430,6 +457,8 @@ export default function UserPage() {
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                role="tab"
+                aria-selected={activeTab === 'booking'}
               >
                 Đặt phòng ({totalBookings})
               </button>
@@ -440,6 +469,8 @@ export default function UserPage() {
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                role="tab"
+                aria-selected={activeTab === 'services'}
               >
                 Dịch vụ ({totalServices})
               </button>
@@ -450,8 +481,34 @@ export default function UserPage() {
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                role="tab"
+                aria-selected={activeTab === 'payments'}
               >
                 Hóa đơn ({totalPayments})
+              </button>
+              <button
+                onClick={() => setActiveTab('calendar')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'calendar'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                role="tab"
+                aria-selected={activeTab === 'calendar'}
+              >
+                Lịch
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'history'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                role="tab"
+                aria-selected={activeTab === 'history'}
+              >
+                Lịch sử
               </button>
             </nav>
           </div>
@@ -459,6 +516,20 @@ export default function UserPage() {
           {/* Tab Content */}
           {activeTab === 'rooms' && (
             <div className="space-y-4">
+              {loading.rooms && (
+                <Card>
+                  <CardBody>
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="h-24 bg-gray-200 rounded"></div>
+                        <div className="h-24 bg-gray-200 rounded"></div>
+                        <div className="h-24 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              )}
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-gray-900">Phòng có sẵn</h2>
                 <div className="text-sm text-gray-600">
@@ -523,6 +594,17 @@ export default function UserPage() {
 
           {activeTab === 'booking' && (
             <div className="space-y-4">
+              {loading.bookings && (
+                <Card>
+                  <CardBody>
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div className="h-20 bg-gray-200 rounded"></div>
+                      <div className="h-20 bg-gray-200 rounded"></div>
+                    </div>
+                  </CardBody>
+                </Card>
+              )}
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-gray-900">Đặt phòng</h2>
                 <Button onClick={() => setBookingModalOpen(true)}>
@@ -574,6 +656,17 @@ export default function UserPage() {
 
           {activeTab === 'services' && (
             <div className="space-y-4">
+              {loading.services && (
+                <Card>
+                  <CardBody>
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div className="h-20 bg-gray-200 rounded"></div>
+                      <div className="h-20 bg-gray-200 rounded"></div>
+                    </div>
+                  </CardBody>
+                </Card>
+              )}
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-gray-900">Dịch vụ</h2>
                 <Button onClick={() => setServiceModalOpen(true)}>
@@ -616,6 +709,136 @@ export default function UserPage() {
               <div className="text-center py-8 text-gray-500">
                 <p>Chức năng thanh toán đang được phát triển</p>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'calendar' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-900">Lịch đặt phòng</h2>
+              </div>
+              <Card>
+                <CardBody>
+                  <div className="grid grid-cols-7 gap-2 text-sm">
+                    {Array.from({ length: 14 }).map((_, idx) => {
+                      const date = new Date();
+                      date.setDate(date.getDate() + idx);
+                      const dateStr = date.toISOString().slice(0, 10);
+                      const dayBookings = bookings.filter(b => b.checkIn?.slice(0,10) === dateStr);
+                      return (
+                        <div key={idx} className="p-2 border rounded">
+                          <div className="text-gray-600 text-xs mb-1">{dateStr}</div>
+                          {dayBookings.length === 0 ? (
+                            <div className="text-gray-400">Trống</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {dayBookings.slice(0,3).map(b => (
+                                <div key={b.id} className="text-xs bg-blue-50 text-blue-700 rounded px-1 py-0.5">
+                                  {b.roomType} - {b.status}
+                                </div>
+                              ))}
+                              {dayBookings.length > 3 && (
+                                <div className="text-xs text-gray-500">+{dayBookings.length - 3} nữa</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-900">Lịch sử hoạt động</h2>
+              </div>
+              <Card>
+                <CardBody>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Chế độ</label>
+                      <select 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => {
+                          const mode = e.target.value
+                          const now = new Date()
+                          if (mode === 'week') {
+                            const start = new Date(now)
+                            start.setDate(now.getDate() - 7)
+                            ;(window as any).__historyFilter = { start: start.toISOString().slice(0,10), end: now.toISOString().slice(0,10) }
+                          } else if (mode === 'month') {
+                            const start = new Date(now.getFullYear(), now.getMonth(), 1)
+                            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+                            ;(window as any).__historyFilter = { start: start.toISOString().slice(0,10), end: end.toISOString().slice(0,10) }
+                          } else {
+                            (window as any).__historyFilter = undefined
+                          }
+                        }}
+                      >
+                        <option value="all">Tất cả</option>
+                        <option value="week">7 ngày qua</option>
+                        <option value="month">Tháng này</option>
+                      </select>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <h3 className="text-md font-semibold text-gray-900">Đặt phòng</h3>
+                </CardHeader>
+                <CardBody>
+                  <div className="grid gap-3">
+                    {(() => {
+                      const f = (window as any).__historyFilter
+                      const list = !f ? bookings : bookings.filter(b => {
+                        const d = (b.createdAt || b.checkIn || '').slice(0,10)
+                        return (!f?.start || d >= f.start) && (!f?.end || d <= f.end)
+                      })
+                      if (list.length === 0) return <div className="text-sm text-gray-500">Chưa có đặt phòng nào</div>
+                      return list.map(b => (
+                        <div key={b.id} className="flex items-center justify-between text-sm">
+                          <div>
+                            <span className="font-medium">{b.roomType}</span> • {b.building}-{b.roomNumber}
+                            <div className="text-gray-500 text-xs">{b.checkIn} → {b.checkOut}</div>
+                          </div>
+                          {getStatusBadge(b.status)}
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                </CardBody>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <h3 className="text-md font-semibold text-gray-900">Dịch vụ</h3>
+                </CardHeader>
+                <CardBody>
+                  <div className="grid gap-3">
+                    {(() => {
+                      const f = (window as any).__historyFilter
+                      const list = !f ? services : (services as any[]).filter((s: any) => {
+                        const d = (s.orderDate || '').slice(0,10)
+                        return (!f?.start || d >= f.start) && (!f?.end || d <= f.end)
+                      })
+                      if (list.length === 0) return <div className="text-sm text-gray-500">Chưa có dịch vụ nào</div>
+                      return list.map((s: any) => (
+                        <div key={s.id} className="flex items-center justify-between text-sm">
+                          <div>
+                            <span className="font-medium">{s.name}</span>
+                            <div className="text-gray-500 text-xs">Giá: {s.price?.toLocaleString?.() || 0} VND</div>
+                          </div>
+                          {getStatusBadge(s.status)}
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                </CardBody>
+              </Card>
             </div>
           )}
         </div>

@@ -216,6 +216,12 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
           icon: <Icons.Roles />, 
           current: pathname.startsWith('/admin/roles')
         },
+        { 
+          name: 'Báo cáo', 
+          href: '/admin/reports', 
+          icon: <Icons.Payments />, 
+          current: pathname.startsWith('/admin/reports')
+        },
       ];
     } else if (isOffice || currentRole === 'office') {
       return [
@@ -228,18 +234,11 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
     } else if (isStaff || currentRole === 'staff') {
       return [
         { name: 'Dashboard', href: '/staff/dashboard', icon: <Icons.Dashboard />, current: pathname.startsWith('/staff/dashboard') },
-        { name: 'Check-in/out', href: '/staff/checkins', icon: <Icons.Checkin />, current: pathname.startsWith('/staff/checkins') },
-        { name: 'Dịch vụ', href: '/staff/services', icon: <Icons.Services />, current: pathname.startsWith('/staff/services') },
-        { name: 'Công việc', href: '/staff/tasks', icon: <Icons.Tasks />, current: pathname.startsWith('/staff/tasks') },
       ];
     
     } else if (isUser || currentRole === 'user') {
       return [
         { name: 'Dashboard', href: '/user/dashboard', icon: <Icons.Dashboard />, current: pathname.startsWith('/user/dashboard') },
-        { name: 'Phòng có sẵn', href: '/user/rooms', icon: <Icons.Bed />, current: pathname.startsWith('/user/rooms') },
-        { name: 'Đặt phòng', href: '/user/bookings', icon: <Icons.Bookings />, current: pathname.startsWith('/user/bookings') },
-        { name: 'Dịch vụ', href: '/user/services', icon: <Icons.Service />, current: pathname.startsWith('/user/services') },
-        { name: 'Hóa đơn', href: '/user/invoices', icon: <Icons.Invoice />, current: pathname.startsWith('/user/invoices') },
       ];
     } else if (isProfile) {
       return [

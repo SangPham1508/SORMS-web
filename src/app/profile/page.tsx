@@ -13,6 +13,7 @@ type UserProfile = {
   phoneNumber: string;
   position: string;
   department: string;
+  avatar?: string;
 };
 
 export default function ProfilePage() {
@@ -83,7 +84,8 @@ export default function ProfilePage() {
           email: "admin@sorms.com",
           phoneNumber: "0901234567",
           position: "Quản trị viên hệ thống",
-          department: "Công nghệ thông tin"
+          department: "Công nghệ thông tin",
+          avatar: ''
         };
       case 'office':
         return {
@@ -92,7 +94,8 @@ export default function ProfilePage() {
           email: "office@sorms.com",
           phoneNumber: "0912345678",
           position: "Nhân viên văn phòng",
-          department: "Quản lý phòng"
+          department: "Quản lý phòng",
+          avatar: ''
         };
       case 'lecturer':
         return {
@@ -101,7 +104,8 @@ export default function ProfilePage() {
           email: "lecturer@sorms.com",
           phoneNumber: "0923456789",
           position: "Giảng viên",
-          department: "Khoa học máy tính"
+          department: "Khoa học máy tính",
+          avatar: ''
         };
       case 'staff':
         return {
@@ -110,7 +114,8 @@ export default function ProfilePage() {
           email: "staff@sorms.com",
           phoneNumber: "0934567890",
           position: "Nhân viên",
-          department: "Hành chính"
+          department: "Hành chính",
+          avatar: ''
         };
       case 'guest':
         return {
@@ -119,7 +124,8 @@ export default function ProfilePage() {
           email: "guest@sorms.com",
           phoneNumber: "0945678901",
           position: "Khách mời",
-          department: "Khách"
+          department: "Khách",
+          avatar: ''
         };
       default:
         return {
@@ -128,7 +134,8 @@ export default function ProfilePage() {
           email: "user@sorms.com",
           phoneNumber: "0956789012",
           position: "Người dùng",
-          department: "Chung"
+          department: "Chung",
+          avatar: ''
         };
     }
   };
@@ -154,7 +161,8 @@ export default function ProfilePage() {
     email: '',
     phoneNumber: '',
     position: '',
-    department: ''
+    department: '',
+    avatar: ''
   });
 
   const handleEditProfile = () => {
@@ -163,7 +171,8 @@ export default function ProfilePage() {
       email: profile.email,
       phoneNumber: profile.phoneNumber,
       position: profile.position,
-      department: profile.department
+      department: profile.department,
+      avatar: profile.avatar || ''
     });
     setEditModalOpen(true);
   };
@@ -205,7 +214,8 @@ export default function ProfilePage() {
       email: editForm.email,
       phoneNumber: editForm.phoneNumber,
       position: editForm.position,
-      department: editForm.department
+      department: editForm.department,
+      avatar: editForm.avatar
     }));
     setEditModalOpen(false);
     setFlash({ type: 'success', text: 'Cập nhật thông tin cá nhân thành công!' });
@@ -264,8 +274,13 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Avatar Section */}
                 <div className="flex flex-col items-center">
-                  <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-4xl text-gray-500">👤</span>
+                  <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4 overflow-hidden">
+                    {profile.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-4xl text-gray-500">👤</span>
+                    )}
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900">{profile.name}</h3>
                   <p className="text-sm text-gray-600">{profile.position}</p>
@@ -428,6 +443,30 @@ export default function ProfilePage() {
           </div>
           <div className="text-xs text-gray-500">
             <span className="text-red-500">*</span> Thông tin bắt buộc
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh đại diện</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    setEditForm(prev => ({ ...prev, avatar: String(reader.result || '') }))
+                  }
+                  reader.readAsDataURL(file)
+                }}
+                className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {editForm.avatar && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editForm.avatar} alt="Preview" className="w-10 h-10 rounded-full object-cover" />
+              )}
+            </div>
+            <p className="mt-1 text-xs text-gray-500">Hỗ trợ ảnh JPG, PNG. Tối đa ~2MB.</p>
           </div>
         </div>
       </Modal>

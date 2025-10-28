@@ -149,17 +149,27 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   // Handle logout
   const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userPicture');
+    // Clear role/session related storages to avoid sticky role
+    try {
+      // Local storage keys
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userPicture');
+      localStorage.removeItem('sidebarVisible');
+      localStorage.removeItem('sidebarCollapsed');
+      // Session storage keys
+      sessionStorage.removeItem('userRole');
+      sessionStorage.removeItem('previousPage');
+    } catch {}
     
     // Clear cookies
     document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     document.cookie = 'approved=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     
-    router.push('/login');
+    // Hard redirect to reset any in-memory state
+    window.location.href = '/login';
   };
 
   // Mark notification as read and navigate to notifications page

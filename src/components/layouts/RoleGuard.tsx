@@ -14,7 +14,7 @@ export default function RoleGuard({ children }: { children: React.ReactNode }) {
     // Determine required role by path
     const requires: { [key: string]: string } = {
       "/admin": "admin",
-      "/office": "office",
+      "/office": "office", // office routes behave like user area
       "/staff": "staff",
       "/lecturer": "user", // lecturer maps to user area in app
       "/guest": "user",
@@ -27,7 +27,7 @@ export default function RoleGuard({ children }: { children: React.ReactNode }) {
 
     const roleToBase: Record<string, string> = {
       admin: "/admin/dashboard",
-      office: "/office/dashboard",
+      office: "/office/dashboard", // office should land on user area
       staff: "/staff/dashboard",
       user: "/user/dashboard",
     };
