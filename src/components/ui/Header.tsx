@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useCurrentRole } from "@/hooks/useCurrentRole";
 import Button from "./Button";
 import Input from "./Input";
 import { getNotificationsByRole, markAsRead, markAllAsRead, type Notification } from "@/lib/notifications";
@@ -29,6 +30,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   // Check if user is logged in (on protected pages)
   const isUser = pathname.startsWith('/user');
   const isLoggedIn = isAdmin || isOffice || isStaff || isUser;
+  const role = useCurrentRole();
 
   // Auto-detect user role based on path and localStorage
   const [detectedUser, setDetectedUser] = useState<{
@@ -69,7 +71,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     if (typeof window !== 'undefined') {
       const storedName = localStorage.getItem('userName');
       const storedEmail = localStorage.getItem('userEmail');
-      const storedRole = localStorage.getItem('userRole');
+      const storedRole = (role || localStorage.getItem('userRole')) as string | null;
       
       if (storedName && storedRole) {
         const roleMap = {
@@ -93,7 +95,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         else if (isGuest) setDetectedUser({ name: "Guest User", email: "guest@sorms.com", role: "Guest" });
       }
     }
-  }, [isAdmin, isOffice, isLecturer, isStaff, isGuest]);
+  }, [isAdmin, isOffice, isLecturer, isStaff, isGuest, role]);
 
   // Close menus when clicking outside
   useEffect(() => {

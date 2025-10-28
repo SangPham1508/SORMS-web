@@ -6,7 +6,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useBookings, useRooms } from "@/hooks/useApi";
 import { useRouter } from "next/navigation";
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 
 export default function OfficeReportsPage() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function OfficeReportsPage() {
   const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   // Export to Excel
-  const exportToExcel = (type: 'bookings' | 'rooms') => {
+  const exportToExcel = async (type: 'bookings' | 'rooms') => {
     let data: any[] = [];
     let filename = '';
 
@@ -67,10 +67,44 @@ export default function OfficeReportsPage() {
       filename = 'bao_cao_phong.xlsx';
     }
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    XLSX.writeFile(wb, filename);
+    // Tạo workbook mới với ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Data');
+
+    // Thêm header row
+    if (data.length > 0) {
+      const headers = Object.keys(data[0]);
+      worksheet.addRow(headers);
+      
+      // Style cho header
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+    }
+
+    // Thêm data rows
+    data.forEach(row => {
+      worksheet.addRow(Object.values(row));
+    });
+
+    // Auto-fit columns
+    worksheet.columns.forEach(column => {
+      column.width = 15;
+    });
+
+    // Tạo buffer và download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -254,4 +288,5 @@ export default function OfficeReportsPage() {
     </>
   );
 }
+
 

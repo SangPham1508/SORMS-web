@@ -17,6 +17,39 @@ class ApiClient {
     this.baseURL = baseURL
   }
 
+  private mapErrorMessage(responseCode: string, originalMessage: string): string {
+    // Map backend error codes to user-friendly messages
+    const errorMappings: { [key: string]: string } = {
+      'SYSTEM_ERROR': 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.',
+      'E0001': 'Dữ liệu không hợp lệ.',
+      'E0002': 'Không tìm thấy dữ liệu.',
+      'E0003': 'Không có quyền truy cập.',
+      'E0004': 'Phiên đăng nhập đã hết hạn.',
+      'E0005': 'Lỗi kết nối cơ sở dữ liệu.',
+      'E0006': 'Dịch vụ tạm thời không khả dụng.',
+      'E0007': 'Dữ liệu đã tồn tại.',
+      'E0008': 'Dữ liệu không được phép xóa.',
+      'E0009': 'Lỗi xác thực.',
+      'E0010': 'Thao tác không được phép.',
+    }
+
+    // Ensure all inputs are strings
+    const safeResponseCode = String(responseCode || '')
+    const safeOriginalMessage = String(originalMessage || '')
+
+    // Return mapped message if available, otherwise use original message
+    const mappedMessage = errorMappings[safeResponseCode]
+    if (mappedMessage) {
+      return mappedMessage
+    }
+    
+    if (safeOriginalMessage && safeOriginalMessage !== 'undefined' && safeOriginalMessage !== 'null') {
+      return safeOriginalMessage
+    }
+    
+    return 'Có lỗi xảy ra. Vui lòng thử lại.'
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -32,7 +65,24 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        // Try to get error message from response body
+        let errorMessage = `HTTP error! status: ${response.status}`
+        try {
+          const errorData = await response.json()
+          if (errorData.message) {
+            errorMessage = errorData.message
+          } else if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch {
+          // If we can't parse the error response, use the status text
+          errorMessage = response.statusText || errorMessage
+        }
+        
+        return {
+          success: false,
+          error: String(errorMessage), // Ensure error is always a string
+        }
       }
 
       const data = await response.json()
@@ -45,9 +95,11 @@ class ApiClient {
             data: data.data,
           }
         } else {
+          // Map common error codes to user-friendly messages
+          const errorMessage = this.mapErrorMessage(data.responseCode, data.message)
           return {
             success: false,
-            error: data.message,
+            error: String(errorMessage), // Ensure error is always a string
           }
         }
       }
@@ -59,9 +111,19 @@ class ApiClient {
       }
     } catch (error) {
       console.error(`API request failed for ${endpoint}:`, error)
+      
+      // Handle network errors and other exceptions
+      let errorMessage = 'Unknown error occurred'
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Network error: Unable to connect to server'
+      } else if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: String(errorMessage), // Ensure error is always a string
       }
     }
   }
@@ -417,6 +479,45 @@ class ApiClient {
         series: [] 
       } 
     }
+  }
+
+  // Check-in methods
+  async getCheckins() {
+    return this.get('/checkins')
+  }
+
+  async createCheckin(checkinData: any) {
+    const formattedData = {
+      booking_code: checkinData.booking_code,
+      user_name: checkinData.user_name,
+      room_code: checkinData.room_code,
+      checkin_at: checkinData.checkin_at,
+      checkout_at: checkinData.checkout_at,
+      face_ref: checkinData.face_ref,
+      status: checkinData.status || 'PENDING'
+    }
+    return this.post('/checkins', formattedData)
+  }
+
+  async updateCheckin(id: number, checkinData: any) {
+    const formattedData = {
+      booking_code: checkinData.booking_code,
+      user_name: checkinData.user_name,
+      room_code: checkinData.room_code,
+      checkin_at: checkinData.checkin_at,
+      checkout_at: checkinData.checkout_at,
+      face_ref: checkinData.face_ref,
+      status: checkinData.status
+    }
+    return this.put(`/checkins/${id}`, formattedData)
+  }
+
+  async deleteCheckin(id: number) {
+    return this.delete(`/checkins/${id}`)
+  }
+
+  async getCheckin(id: number) {
+    return this.get(`/checkins/${id}`)
   }
 }
 

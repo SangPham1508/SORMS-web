@@ -25,10 +25,43 @@ export function useApi<T>(
       if (response.success) {
         setData(response.data || null)
       } else {
-        setError(response.error || 'API call failed')
+        // Better error handling with more context
+        let errorMessage = 'API call failed'
+        
+        if (response.error) {
+          if (typeof response.error === 'string') {
+            errorMessage = response.error
+          } else if (typeof response.error === 'object' && response.error !== null) {
+            // Handle object errors
+            const errorObj = response.error as any
+            if (errorObj.message) {
+              errorMessage = String(errorObj.message)
+            } else if (errorObj.error) {
+              errorMessage = String(errorObj.error)
+            } else {
+              // Try to stringify the object
+              try {
+                errorMessage = JSON.stringify(response.error)
+              } catch {
+                errorMessage = 'Unknown error object'
+              }
+            }
+          }
+        }
+        
+        console.error('API Error:', {
+          message: errorMessage,
+          originalError: response.error,
+          timestamp: new Date().toISOString(),
+          endpoint: apiCall.name || 'unknown'
+        })
+        setError(errorMessage)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      // This should rarely happen now since we handle errors in apiClient
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      console.error('Unexpected API Error:', errorMessage)
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -61,6 +94,10 @@ export function useBookings() {
 
 export function useServices() {
   return useApi(() => apiClient.getServices())
+}
+
+export function useCheckins() {
+  return useApi(() => apiClient.getCheckins())
 }
 
 // Dashboard stats derived from real endpoints

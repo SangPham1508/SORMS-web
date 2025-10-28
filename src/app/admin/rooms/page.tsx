@@ -672,17 +672,17 @@ export default function RoomsPage() {
             </div>
 
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-gray-200">
+            <div className="flex flex-row gap-3 pt-3 border-t border-gray-200">
               <Button 
                 variant="secondary" 
                 onClick={() => setEditOpen(false)}
-                className="w-full sm:w-auto"
+                className="flex-1"
               >
-                Hủy
+                Hủy bỏ
               </Button>
               <Button 
                 onClick={save}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
                 {edit.id ? 'Cập nhật' : 'Tạo mới'}
               </Button>

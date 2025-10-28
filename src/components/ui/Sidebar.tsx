@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useCurrentRole } from "@/hooks/useCurrentRole";
 import Button from "./Button";
 
 interface SidebarProps {
@@ -28,6 +29,8 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
   const isOffice = pathname.startsWith('/office');
   const isStaff = pathname.startsWith('/staff');
   const isUser = pathname.startsWith('/user');
+
+  const role = useCurrentRole();
   const isProfile = pathname.startsWith('/profile');
   const isNotifications = pathname.startsWith('/notifications');
 
@@ -143,7 +146,7 @@ export default function Sidebar({ user, isVisible = false, collapsed = true, onT
   // Simplified navigation - no submenus, only single links
   const getNavigation = () => {
     // Check userRole from sessionStorage first, then fallback to path detection
-    const currentRole = userRole || (isAdmin ? 'admin' : isOffice ? 'office' : isStaff ? 'staff' : isUser ? 'user' : null);
+    const currentRole = (role || userRole || (isAdmin ? 'admin' : isOffice ? 'office' : isStaff ? 'staff' : isUser ? 'user' : null)) as string | null;
     
     if (isAdmin || currentRole === 'admin') {
       return [

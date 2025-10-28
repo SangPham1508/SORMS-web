@@ -317,12 +317,21 @@ export default function RoomTypesPage() {
           <div className="px-4 py-3">
             <div className="max-w-7xl mx-auto">
               <Card className="bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-xl rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gray-50 border-b border-gray-200 px-6 py-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg text-left font-bold text-gray-900">Danh sách loại phòng</h2>
-                    <span className="text-sm text-right font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">{filtered.length} loại phòng</span>
-                  </div>
-                </CardHeader>
+              <CardHeader className="bg-gray-50 border-b border-gray-200 px-6 py-3">
+  <div className="grid grid-cols-2 items-center">
+    {/* Cột trái */}
+    <h2 className="text-lg font-bold text-gray-900 text-left">
+      Danh sách loại phòng
+    </h2>
+
+    {/* Cột phải */}
+    <span className="text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full text-right justify-self-end">
+      {filtered.length} loại phòng
+    </span>
+  </div>
+</CardHeader>
+
+
                 <CardBody className="p-0">
                   {/* Desktop Table */}
                   <div className="hidden lg:block overflow-x-auto">
@@ -391,164 +400,163 @@ export default function RoomTypesPage() {
                     </table>
                   </div>
 
-                  {/* Mobile Cards */}
+                  {/* Mobile Cards - Booking Style */}
                   <div className="lg:hidden p-4">
-  <div className="grid grid-cols-1 gap-4">
-    {filtered.slice((page - 1) * size, page * size).map((row) => (
-      <div
-        key={row.id}
-        className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-4"
-      >
-        <div className="grid grid-cols-[auto_1fr] gap-3 mb-4 items-center">
-          {/* Cột 1: Icon chữ cái đầu */}
-          <div className="flex items-center justify-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-              <span className="text-white font-bold text-base">
-                {row.code.charAt(0)}
-              </span>
-            </div>
-          </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      {filtered.slice((page - 1) * size, page * size).map((row) => (
+                        <div
+                          key={row.id}
+                          className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden"
+                        >
+                          {/* Header với gradient */}
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-100">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                                  <span className="text-white font-bold text-sm">
+                                    {row.code.charAt(0)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-bold text-gray-900">{row.code}</h3>
+                                  <p className="text-sm text-gray-600">{row.name}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
 
-          {/* Cột 2: Thông tin */}
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-gray-800 break-words whitespace-normal leading-snug font-medium">
-              {row.name}
-            </p>
+                          {/* Thông tin chính */}
+                          <div className="p-4 space-y-3">
+                            {/* Giá và số người */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                </svg>
+                                <div>
+                                  <div className="text-xs text-gray-500">Giá</div>
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {row.basePrice === 0 ? 'Miễn phí' : `${row.basePrice.toLocaleString('vi-VN')} VND`}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <div>
+                                  <div className="text-xs text-gray-500">Số người</div>
+                                  <div className="text-sm font-semibold text-gray-900">{row.maxOccupancy}</div>
+                                </div>
+                              </div>
+                            </div>
 
-            {/* Giá tiền */}
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-indigo-500 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                />
-              </svg>
-              <span
-                className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
-                  row.basePrice === 0
-                    ? "bg-green-100 text-green-700"
-                    : "bg-indigo-100 text-indigo-700"
-                }`}
-              >
-                {row.basePrice === 0
-                  ? "Miễn phí"
-                  : `${row.basePrice.toLocaleString("vi-VN")} VND`}
-              </span>
-            </div>
+                            {/* Mô tả nếu có */}
+                            {row.description && (
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  <span className="text-sm font-medium text-gray-700">Mô tả</span>
+                                </div>
+                                <p className="text-sm text-gray-600">{row.description}</p>
+                              </div>
+                            )}
+                          </div>
 
-            {/* Số người */}
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-blue-500 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                {row.maxOccupancy} người
-              </span>
-            </div>
-          </div>
-        </div>
+                          {/* Nút thao tác - Mobile Fixed */}
+                          <div className="px-3 py-3 bg-gray-50 border-t border-gray-100">
+                            <div className="grid grid-cols-3 gap-2">
+                              <Button
+                                variant="secondary"
+                                className="h-10 text-xs font-medium px-2"
+                                onClick={() => {
+                                  setSelected(row);
+                                  setDetailOpen(true);
+                                }}
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Xem
+                              </Button>
 
-        {/* Nút thao tác */}
-        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
-          <Button
-            variant="secondary"
-            className="h-9 text-xs font-medium"
-            onClick={() => {
-              setSelected(row);
-              setDetailOpen(true);
-            }}
-          >
-            <svg
-              className="w-3 h-3 mr-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
-            Xem
-          </Button>
+                              <Button
+                                className="h-10 text-xs font-medium px-2"
+                                onClick={() => openEdit(row)}
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Sửa
+                              </Button>
 
-          <Button
-            className="h-9 text-xs font-medium"
-            onClick={() => openEdit(row)}
-          >
-            <svg
-              className="w-3 h-3 mr-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-              />
-            </svg>
-            Sửa
-          </Button>
-
-          <Button
-            variant="danger"
-            className="h-9 text-xs font-medium"
-            onClick={() => confirmDelete(row.id)}
-          >
-            <svg
-              className="w-3 h-3 mr-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-            Xóa
-          </Button>
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
+                              <Button
+                                variant="danger"
+                                className="h-10 text-xs font-medium px-2"
+                                onClick={() => confirmDelete(row.id)}
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Xóa
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                 </CardBody>
 
-                {/* Pagination */}
+                {/* Pagination - Mobile Optimized */}
                 {filtered.length > size && (
-                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-200/50">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
+                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-3 py-4 border-t border-gray-200/50">
+                    {/* Mobile Layout */}
+                    <div className="lg:hidden">
+                      <div className="text-center mb-4">
+                        <div className="text-sm text-gray-600 mb-1">Hiển thị kết quả</div>
+                        <div className="text-lg font-bold text-gray-900">
+                          <span className="text-blue-600">{(page - 1) * size + 1}</span> - <span className="text-blue-600">{Math.min(page * size, filtered.length)}</span> / <span className="text-gray-600">{filtered.length}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-3">
+                        <Button
+                          variant="secondary"
+                          disabled={page === 1}
+                          onClick={() => setPage(page - 1)}
+                          className="h-10 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                          Trước
+                        </Button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-700 bg-white px-3 py-2 rounded-xl border-2 border-blue-200 shadow-sm">
+                            {page}
+                          </span>
+                          <span className="text-sm text-gray-500">/ {Math.ceil(filtered.length / size)}</span>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          disabled={page >= Math.ceil(filtered.length / size)}
+                          onClick={() => setPage(page + 1)}
+                          className="h-10 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Sau
+                          <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Desktop Layout */}
+                    <div className="hidden lg:flex flex-row items-center justify-between gap-4 sm:gap-6">
                       <div className="text-center sm:text-left">
                         <div className="text-xs sm:text-sm text-gray-600 mb-1">Hiển thị kết quả</div>
                         <div className="text-sm sm:text-lg font-bold text-gray-900">
@@ -729,17 +737,17 @@ export default function RoomTypesPage() {
             </div>
 
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-gray-200">
+            <div className="flex flex-row gap-3 pt-3 border-t border-gray-200">
               <Button 
                 variant="secondary" 
                 onClick={() => setEditOpen(false)}
-                className="w-full sm:w-auto"
+                className="flex-1"
               >
-                Hủy
+                Hủy bỏ
               </Button>
               <Button 
                 onClick={save}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
                 {edit.id ? 'Cập nhật' : 'Tạo mới'}
               </Button>

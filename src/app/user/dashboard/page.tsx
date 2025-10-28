@@ -7,7 +7,7 @@ import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import { createBookingNotification } from "@/lib/notifications";
-import { useRooms, useBookings, useServiceOrders, usePayments } from "@/hooks/useApi";
+import { useRooms, useBookings, useServices } from "@/hooks/useApi";
 import { apiClient } from "@/lib/api-client";
 
 type Room = {
@@ -38,6 +38,14 @@ type RoomBooking = {
   roomNumber: string;
   rejectionReason?: string;
   confirmedAt?: string;
+};
+
+type Service = {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  status: 'AVAILABLE' | 'COMPLETED' | 'CANCELLED';
 };
 
 type ServiceOrder = {
@@ -102,20 +110,16 @@ export default function UserPage() {
   // Use API hooks for data fetching
   const { data: roomsData, loading: roomsLoading, error: roomsError, refetch: refetchRooms } = useRooms();
   const { data: bookingsData, loading: bookingsLoading, error: bookingsError, refetch: refetchBookings } = useBookings();
-  const { data: serviceOrdersData, loading: serviceOrdersLoading, error: serviceOrdersError, refetch: refetchServiceOrders } = useServiceOrders();
-  const { data: paymentsData, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePayments();
+  const { data: servicesData, loading: servicesLoading, error: servicesError, refetch: refetchServices } = useServices();
 
   // Transform API data to match component types
   const rooms: Room[] = (roomsData as any)?.data || [];
   const bookings: RoomBooking[] = (bookingsData as any)?.data || [];
-  const serviceOrders: ServiceOrder[] = (serviceOrdersData as any)?.data || [];
-  const payments: Payment[] = (paymentsData as any)?.data || [];
+  const services: Service[] = (servicesData as any)?.data || [];
   
   // Bookings are now loaded from API via useBookings hook
 
-  // Service orders are now loaded from API via useServiceOrders hook
-
-  // Payments/payments are now loaded from API via usePayments hook
+  // Services are now loaded from API via useServices hook
 
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
@@ -259,7 +263,7 @@ export default function UserPage() {
         orderDate: new Date().toISOString()
       };
 
-      const response = await apiClient.createServiceOrder(serviceOrderData);
+      const response = await apiClient.createService(serviceOrderData);
       
       if (response.success) {
         setServiceModalOpen(false);
@@ -267,7 +271,7 @@ export default function UserPage() {
         setFlash({ type: 'success', text: 'Đặt dịch vụ thành công!' });
         
         // Refresh service orders data
-        refetchServiceOrders();
+        refetchServices();
       } else {
         setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi đặt dịch vụ' });
       }
@@ -293,19 +297,11 @@ export default function UserPage() {
           paidDate: new Date().toISOString()
         };
 
-        const response = await apiClient.createPayment(paymentDataToSend);
-        
-        if (response.success) {
-          setPaymentModalOpen(false);
-          setSelectedPayment(null);
-          setPaymentData({ method: '', amount: 0 });
-          setFlash({ type: 'success', text: 'Thanh toán thành công!' });
-          
-          // Refresh payments data
-          refetchPayments();
-        } else {
-          setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi thanh toán' });
-        }
+        // Payment API not available yet - simulate success
+        setPaymentModalOpen(false);
+        setSelectedPayment(null);
+        setPaymentData({ method: '', amount: 0 });
+        setFlash({ type: 'success', text: 'Thanh toán thành công!' });
       } catch (error) {
         setFlash({ type: 'error', text: 'Có lỗi xảy ra khi thanh toán' });
         console.error('Payment error:', error);
@@ -334,12 +330,13 @@ export default function UserPage() {
 
   const totalBookings = bookings.length;
   const confirmedBookings = bookings.filter(b => b.status === 'CONFIRMED').length;
-  const totalServices = serviceOrders.length;
-  const completedServices = serviceOrders.filter(s => s.status === 'COMPLETED').length;
-  const totalPayments = payments.length;
-  const paidPayments = payments.filter(i => i.status === 'PAID').length;
-  const pendingPayments = payments.filter(i => i.status === 'PENDING').length;
-  const overduePayments = payments.filter(i => i.status === 'OVERDUE').length;
+  const totalServices = services.length;
+  const completedServices = services.filter(s => s.status === 'COMPLETED').length;
+  // Payments functionality temporarily disabled
+  const totalPayments = 0;
+  const paidPayments = 0;
+  const pendingPayments = 0;
+  const overduePayments = 0;
 
   return (
     <>
@@ -585,28 +582,22 @@ export default function UserPage() {
               </div>
               
               <div className="grid gap-4">
-                {serviceOrders.map((service) => (
+                {services.map((service) => (
                   <Card key={service.id}>
                     <CardBody>
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {service.serviceName}
+                              {service.name}
                             </h3>
                             {getStatusBadge(service.status)}
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm text-gray-600">
-                            <div><span className="font-medium">Số lượng:</span> {service.quantity}</div>
-                            <div><span className="font-medium">Đơn giá:</span> {service.unitPrice.toLocaleString()} VND</div>
-                            <div><span className="font-medium">Tổng tiền:</span> {service.totalPrice.toLocaleString()} VND</div>
-                            <div><span className="font-medium">Đặt lúc:</span> {new Date(service.orderDate).toLocaleDateString('vi-VN')}</div>
+                          <p className="text-sm text-gray-600 mb-2">{service.description}</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
+                            <div><span className="font-medium">Giá:</span> {service.price.toLocaleString()} VND</div>
+                            <div><span className="font-medium">Trạng thái:</span> {service.status}</div>
                           </div>
-                          {service.deliveryDate && (
-                            <div className="text-sm text-gray-600 mt-2">
-                              <span className="font-medium">Giao hàng:</span> {new Date(service.deliveryDate).toLocaleString('vi-VN')}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </CardBody>
@@ -622,59 +613,8 @@ export default function UserPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Hóa đơn</h2>
               </div>
               
-              <div className="grid gap-4">
-                {payments.map((payment) => (
-                  <Card key={payment.id}>
-                    <CardBody>
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              Hóa đơn #{payment.id}
-                            </h3>
-                            {getStatusBadge(payment.status)}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{payment.description}</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm text-gray-600">
-                            <div><span className="font-medium">Số tiền:</span> {payment.amount.toLocaleString()} VND</div>
-                            <div><span className="font-medium">Hạn thanh toán:</span> {payment.dueDate}</div>
-                            {payment.paidDate && (
-                              <div><span className="font-medium">Đã thanh toán:</span> {payment.paidDate}</div>
-                            )}
-                            {payment.paymentMethod && (
-                              <div><span className="font-medium">Phương thức:</span> {payment.paymentMethod}</div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          {payment.status === 'PENDING' && (
-                            <Button 
-                              onClick={() => {
-                                setSelectedPayment(payment);
-                                setPaymentData({ method: '', amount: payment.amount });
-                                setPaymentModalOpen(true);
-                              }}
-                            >
-                              Thanh toán
-                            </Button>
-                          )}
-                          {payment.status === 'OVERDUE' && (
-                            <Button 
-                              onClick={() => {
-                                setSelectedPayment(payment);
-                                setPaymentData({ method: '', amount: payment.amount });
-                                setPaymentModalOpen(true);
-                              }}
-                              variant="danger"
-                            >
-                              Thanh toán ngay
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))}
+              <div className="text-center py-8 text-gray-500">
+                <p>Chức năng thanh toán đang được phát triển</p>
               </div>
             </div>
           )}

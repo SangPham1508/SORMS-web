@@ -6,6 +6,7 @@ import Sidebar from "@/components/ui/Sidebar";
 import Footer from "@/components/ui/Footer";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import RoleGuard from "./RoleGuard";
 interface ConditionalLayoutProps {
   children: ReactNode;
 }
@@ -98,7 +99,9 @@ function ConditionalLayoutContent({ children }: ConditionalLayoutProps) {
         
         {/* Page content */}
         <main className="min-h-screen">
-          {children}
+          <RoleGuard>
+            {children}
+          </RoleGuard>
         </main>
         
         {/* Footer */}

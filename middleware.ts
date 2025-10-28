@@ -8,6 +8,34 @@ export async function middleware(req: NextRequest) {
 	const roleFromCookie = req.cookies.get("role")?.value;
 	const role = roleFromToken || roleFromCookie;
 	const email = (token as any)?.email as string | undefined;
+
+	// Helper: map role to base dashboard
+	const roleBasePath = (r?: string) => {
+		switch (r) {
+			case "admin":
+				return "/admin/dashboard";
+			case "office":
+				return "/office/dashboard";
+			case "staff":
+				return "/staff/dashboard";
+			case "lecturer":
+				return "/user/dashboard"; // lecturers use user dashboard in app
+			case "guest":
+				return "/user/dashboard";
+			default:
+				return "/login";
+		}
+	};
+
+	// Helper: get required role from path
+	const requiredRoleForPath = (path: string): string | undefined => {
+		if (path.startsWith("/admin")) return "admin";
+		if (path.startsWith("/office")) return "office";
+		if (path.startsWith("/staff")) return "staff";
+		if (path.startsWith("/lecturer")) return "lecturer";
+		if (path.startsWith("/guest")) return "guest";
+		return undefined;
+	};
 	
 	console.log('🔍 Middleware check:', {
 		pathname,
@@ -30,8 +58,7 @@ export async function middleware(req: NextRequest) {
 	const testEmails = ["nguyenquyen220903@gmail.com"]; // Test emails
 	const domainValid = !!email && (
 		email.toLowerCase().endsWith("@fpt.edu.vn") || 
-		email.toLowerCase().endsWith("@fe.edu.vn") ||
-		email.toLowerCase().endsWith("@gmail.com") || // Allow all Gmail
+		email.toLowerCase().endsWith("@fe.edu.vn") || // Allow all Gmail
 		testEmails.includes(email.toLowerCase())
 	);
 	
@@ -49,11 +76,28 @@ export async function middleware(req: NextRequest) {
 
 	const needsStrictAccess = pathname.startsWith("/admin") || pathname.startsWith("/office");
 	const needsRoleAccess = pathname.startsWith("/staff") || pathname.startsWith("/lecturer") || pathname.startsWith("/guest");
+
+	// Enforce exact role-to-route mapping first
+	const requiredRole = requiredRoleForPath(pathname);
+	if (requiredRole && isRolePage) {
+		if (!role) {
+			const url = req.nextUrl.clone();
+			url.pathname = "/login";
+			url.searchParams.set("next", pathname);
+			return NextResponse.redirect(url);
+		}
+		if (role !== requiredRole) {
+			const url = req.nextUrl.clone();
+			url.pathname = roleBasePath(role);
+			return NextResponse.redirect(url);
+		}
+	}
 	
 	if (needsStrictAccess) {
 		const isAdmin = role === "admin";
 		const isOffice = role === "office";
-		const allowedByRole = isAdmin || isOffice;
+		// After exact mapping above, this is a secondary guard
+		const allowedByRole = (pathname.startsWith("/admin") && isAdmin) || (pathname.startsWith("/office") && isOffice);
 		const allowedByDomain = domainValid; // only FPT/FE domains can access admin/office
 		console.log('🔒 Strict access check:', { isAdmin, isOffice, allowedByRole, allowedByDomain, isApproved });
 		if (!allowedByRole || !allowedByDomain || !isApproved) {
@@ -69,7 +113,8 @@ export async function middleware(req: NextRequest) {
 		const isStaff = role === "staff";
 		const isLecturer = role === "lecturer";
 		const isGuest = role === "guest";
-		const allowedByRole = isStaff || isLecturer || isGuest;
+		// After exact mapping above, this is a secondary guard
+		const allowedByRole = (pathname.startsWith("/staff") && isStaff) || (pathname.startsWith("/lecturer") && isLecturer) || (pathname.startsWith("/guest") && isGuest);
 		const allowedByDomain = domainValid; // FPT/FE domains or test emails
 		console.log('👥 Role access check:', { isStaff, isLecturer, isGuest, allowedByRole, allowedByDomain, isApproved });
 		if (!allowedByRole || !allowedByDomain || !isApproved) {
