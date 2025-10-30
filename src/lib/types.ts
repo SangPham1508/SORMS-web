@@ -19,10 +19,11 @@ export interface Role {
 export interface User {
   id: number;
   email: string;
-  password_hash: string;
+  password_hash?: string;
   full_name: string;
   phone_number?: string;
   status: UserStatus;
+  roles?: string[];
   created_at: string;
   updated_at: string;
 }

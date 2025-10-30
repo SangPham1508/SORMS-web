@@ -125,12 +125,40 @@ export default function UsersPage() {
     return ordered;
   }, [rows, query, sortKey, sortOrder]);
 
-  function deactivate(id: number) {
-    setRows((r) => r.map((u) => (u.id === id ? { ...u, status: "INACTIVE" } : u)));
+  async function deactivate(id: number) {
+    try {
+      const res = await fetch(`/api/system/users?action=deactivate&userId=${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (res.ok) {
+        setRows((r) => r.map((u) => (u.id === id ? { ...u, status: "INACTIVE" } : u)));
+        setMessage('Đã vô hiệu hóa người dùng.');
+      } else {
+        setMessage('Lỗi khi vô hiệu hóa người dùng.');
+      }
+    } catch (error) {
+      setMessage('Lỗi khi vô hiệu hóa người dùng.');
+    }
   }
 
-  function activate(id: number) {
-    setRows((r) => r.map((u) => (u.id === id ? { ...u, status: "ACTIVE" } : u)));
+  async function activate(id: number) {
+    try {
+      const res = await fetch(`/api/system/users?action=activate&userId=${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (res.ok) {
+        setRows((r) => r.map((u) => (u.id === id ? { ...u, status: "ACTIVE" } : u)));
+        setMessage('Đã kích hoạt người dùng.');
+      } else {
+        setMessage('Lỗi khi kích hoạt người dùng.');
+      }
+    } catch (error) {
+      setMessage('Lỗi khi kích hoạt người dùng.');
+    }
   }
 
   useEffect(() => {

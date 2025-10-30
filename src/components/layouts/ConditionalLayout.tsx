@@ -98,7 +98,7 @@ function ConditionalLayoutContent({ children }: ConditionalLayoutProps) {
         </div>
         
         {/* Page content */}
-        <main className="min-h-screen">
+        <main className="min-h-screen pb-8 sm:pb-0">
           <RoleGuard>
             {children}
           </RoleGuard>

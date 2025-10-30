@@ -1,4 +1,5 @@
 import './globals.css'
+import { Providers } from './providers'
 
 export const metadata = {
   title: 'SORMS - Nhà Công Vụ Thông Minh',
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#3B82F6" />
         <meta name="robots" content="index, follow" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   )
 }

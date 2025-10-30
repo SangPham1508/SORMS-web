@@ -118,9 +118,9 @@ export default function UserPage() {
   }, [roomsLoading, bookingsLoading, servicesLoading])
 
   // Transform API data to match component types
-  const rooms: Room[] = (roomsData as any)?.data || [];
-  const bookings: RoomBooking[] = (bookingsData as any)?.data || [];
-  const services: Service[] = (servicesData as any)?.data || [];
+  const rooms: Room[] = (roomsData as any) || [];
+  const bookings: RoomBooking[] = (bookingsData as any) || [];
+  const services: Service[] = (servicesData as any) || [];
   
   // Bookings are now loaded from API via useBookings hook
 
