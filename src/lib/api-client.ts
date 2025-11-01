@@ -21,6 +21,7 @@ class ApiClient {
     // Map backend error codes to user-friendly messages
     const errorMappings: { [key: string]: string } = {
       'SYSTEM_ERROR': 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.',
+      'S0001': 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.',
       'E0001': 'Dữ liệu không hợp lệ.',
       'E0002': 'Không tìm thấy dữ liệu.',
       'E0003': 'Không có quyền truy cập.',
@@ -37,13 +38,19 @@ class ApiClient {
     const safeResponseCode = String(responseCode || '')
     const safeOriginalMessage = String(originalMessage || '')
 
-    // Return mapped message if available, otherwise use original message
-    const mappedMessage = errorMappings[safeResponseCode]
-    if (mappedMessage) {
-      return mappedMessage
+    // Try to map responseCode first
+    const mappedByCode = errorMappings[safeResponseCode]
+    if (mappedByCode) {
+      return mappedByCode
     }
     
+    // If responseCode not found, try to map the originalMessage (which might be an error code)
     if (safeOriginalMessage && safeOriginalMessage !== 'undefined' && safeOriginalMessage !== 'null') {
+      const mappedByMessage = errorMappings[safeOriginalMessage]
+      if (mappedByMessage) {
+        return mappedByMessage
+      }
+      // If message can be mapped, use it; otherwise use original message
       return safeOriginalMessage
     }
     
@@ -64,15 +71,29 @@ class ApiClient {
         ...options,
       })
 
+      // Log response details for debugging
+      console.log(`[API Client] ${endpoint} - Response status:`, response.status, response.statusText)
+      
       if (!response.ok) {
         // Try to get error message from response body
         let errorMessage = `HTTP error! status: ${response.status}`
         try {
           const errorData = await response.json()
-          if (errorData.message) {
+          console.log(`[API Client] ${endpoint} - Error response body:`, JSON.stringify(errorData, null, 2))
+          
+          // Try to map error code if present
+          if (errorData.responseCode) {
+            errorMessage = this.mapErrorMessage(errorData.responseCode, errorData.message || errorData.error || '')
+          } else if (errorData.message) {
             errorMessage = errorData.message
           } else if (errorData.error) {
-            errorMessage = errorData.error
+            // Check if error is a code that can be mapped
+            const mappedError = this.mapErrorMessage(errorData.error, '')
+            if (mappedError !== 'Có lỗi xảy ra. Vui lòng thử lại.') {
+              errorMessage = mappedError
+            } else {
+              errorMessage = errorData.error
+            }
           }
         } catch {
           // If we can't parse the error response, use the status text
@@ -86,9 +107,10 @@ class ApiClient {
       }
 
       const data = await response.json()
+      console.log(`[API Client] ${endpoint} - Success response body:`, JSON.stringify(data, null, 2))
       
       // Handle backend response format: {responseCode, message, data}
-      if (data.responseCode && data.message) {
+      if (data.responseCode) {
         if (data.responseCode === 'S0000') {
           return {
             success: true,
@@ -96,11 +118,28 @@ class ApiClient {
           }
         } else {
           // Map common error codes to user-friendly messages
-          const errorMessage = this.mapErrorMessage(data.responseCode, data.message)
+          // Even if message is missing, try to map the responseCode
+          const errorMessage = this.mapErrorMessage(data.responseCode, data.message || data.error || '')
           return {
             success: false,
             error: String(errorMessage), // Ensure error is always a string
           }
+        }
+      }
+      
+      // Check if response has error field (even with HTTP 200)
+      if (data.error) {
+        // Try to map error code if it looks like one
+        const mappedError = this.mapErrorMessage(data.error, data.message || '')
+        if (mappedError !== 'Có lỗi xảy ra. Vui lòng thử lại.') {
+          return {
+            success: false,
+            error: String(mappedError),
+          }
+        }
+        return {
+          success: false,
+          error: String(data.error),
         }
       }
       
@@ -252,15 +291,22 @@ class ApiClient {
   }
 
   async createBooking(bookingData: any) {
-    // Ensure data matches API format
+    // Generate booking code if not provided
+    const generateBookingCode = () => {
+      const timestamp = Date.now().toString(36).toUpperCase()
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase()
+      return `BK-${timestamp}-${random}`
+    }
+
+    // Ensure data matches API format - handle both camelCase and snake_case, and common variations
     const formattedData = {
-      code: bookingData.code,
-      userId: bookingData.userId || bookingData.user_id,
+      code: bookingData.code || generateBookingCode(),
+      userId: bookingData.userId || bookingData.user_id || null,
       roomId: bookingData.roomId || bookingData.room_id,
-      checkinDate: bookingData.checkinDate || bookingData.checkin_date,
-      checkoutDate: bookingData.checkoutDate || bookingData.checkout_date,
-      numGuests: bookingData.numGuests || bookingData.num_guests,
-      note: bookingData.note || '',
+      checkinDate: bookingData.checkinDate || bookingData.checkin_date || bookingData.checkIn,
+      checkoutDate: bookingData.checkoutDate || bookingData.checkout_date || bookingData.checkOut,
+      numGuests: bookingData.numGuests || bookingData.num_guests || bookingData.guests || 1,
+      note: bookingData.note || bookingData.purpose || '',
       status: bookingData.status || 'PENDING'
     }
     return this.post('/bookings', formattedData)

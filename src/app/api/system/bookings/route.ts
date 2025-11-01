@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { apiClient } from '@/lib/api-client'
 
 // GET - Fetch all bookings, specific booking by ID, or filtered bookings
@@ -103,6 +104,19 @@ export async function POST(req: NextRequest) {
 
     // Create new booking (default)
     const body = await req.json()
+    
+    // Try to get userId from session if not provided
+    if (!body.userId && !body.user_id) {
+      try {
+        const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+        // If we have user email, we might need to look up userId
+        // For now, we'll let the backend handle it or use a default
+        // TODO: Query user by email to get userId if needed
+      } catch (error) {
+        console.error('Error getting token:', error)
+      }
+    }
+    
     const response = await apiClient.createBooking(body)
     
     if (!response.success) {

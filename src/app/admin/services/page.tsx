@@ -92,6 +92,10 @@ export default function ServicesPage() {
       setFlash({ type: 'error', text: 'Vui lòng nhập Code và Tên dịch vụ.' })
       return
     }
+    if (!edit.unitName.trim()) {
+      setFlash({ type: 'error', text: 'Vui lòng nhập Đơn vị.' })
+      return
+    }
     if (edit.unitPrice < 0) {
       setFlash({ type: 'error', text: 'Giá dịch vụ không được âm.' })
       return
@@ -122,7 +126,18 @@ export default function ServicesPage() {
         if (!response.ok) {
           const errorData = await response.json()
           console.log('PUT error data:', errorData)
-          setFlash({ type: 'error', text: errorData.error || 'Có lỗi xảy ra khi cập nhật dịch vụ.' })
+          
+          // Hiển thị error message rõ ràng hơn
+          let errorMessage = errorData.error || 'Có lỗi xảy ra khi cập nhật dịch vụ.'
+          
+          // Nếu là lỗi hệ thống, thêm thông tin hữu ích
+          if (errorMessage.includes('Hệ thống đang gặp sự cố') || 
+              errorMessage.includes('SYSTEM_ERROR') ||
+              response.status === 500) {
+            errorMessage = `${errorMessage} Vui lòng kiểm tra kết nối với server hoặc thử lại sau.`
+          }
+          
+          setFlash({ type: 'error', text: errorMessage })
           return
         }
         
@@ -132,18 +147,37 @@ export default function ServicesPage() {
         await refetchServices()
         setFlash({ type: 'success', text: 'Đã cập nhật dịch vụ.' })
       } else {
+        console.log('POST request payload:', payload)
         const response = await fetch('/api/system/services', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         })
-        
+
+        console.log('POST response status:', response.status)
+        console.log('POST response ok:', response.ok)
+
         if (!response.ok) {
           const errorData = await response.json()
-          setFlash({ type: 'error', text: errorData.error || 'Có lỗi xảy ra khi tạo dịch vụ mới.' })
+          console.log('POST error data:', errorData)
+          
+          // Hiển thị error message rõ ràng hơn
+          let errorMessage = errorData.error || 'Có lỗi xảy ra khi tạo dịch vụ mới.'
+          
+          // Nếu là lỗi hệ thống, thêm thông tin hữu ích
+          if (errorMessage.includes('Hệ thống đang gặp sự cố') || 
+              errorMessage.includes('SYSTEM_ERROR') ||
+              response.status === 500) {
+            errorMessage = `${errorMessage} Vui lòng kiểm tra kết nối với server hoặc thử lại sau.`
+          }
+          
+          setFlash({ type: 'error', text: errorMessage })
           return
         }
-        
+
+        const responseData = await response.json()
+        console.log('POST success data:', responseData)
+
         await refetchServices()
         setFlash({ type: 'success', text: 'Đã tạo dịch vụ mới.' })
       }
