@@ -21,16 +21,9 @@ type Payment = {
   note?: string
 }
 
-const mock: Payment[] = [
-  { id: 1, code: 'PM-0001', order_code: 'SO-0001', payer_name: 'Nguyen Van A', method: 'Tiền Mặt', amount: 80000, created_at: '2025-10-19T11:00:00', status: 'SUCCESS' },
-  { id: 2, code: 'PM-0002', order_code: 'SO-0002', payer_name: 'Tran Thi B', method: 'Chuyển Khoản', amount: 150000, created_at: '2025-10-18T15:20:00', status: 'PENDING' },
-  { id: 3, code: 'PM-0003', order_code: 'SO-0003', payer_name: 'Le Van C', method: 'Tiền Mặt', amount: 50000, created_at: '2025-10-17T10:30:00', status: 'REFUNDED' },
-]
+// Removed mock; always use API
 
 export default function PaymentsPage() {
-  // State quản lý chế độ demo/production
-  const [isDemoMode, setIsDemoMode] = useState(true)
-  const [isModeSwitching, setIsModeSwitching] = useState(false)
   const [rows, setRows] = useState<Payment[]>([])
   const [flash, setFlash] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
@@ -52,47 +45,22 @@ export default function PaymentsPage() {
 
   useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 3000); return () => clearTimeout(t) }, [flash])
 
-  // Debounced mode toggle để tránh spam click
-  const [toggleTimeout, setToggleTimeout] = useState<NodeJS.Timeout | null>(null)
-  
-  const handleModeToggle = () => {
-    if (isModeSwitching) return // Prevent spam click during transition
-    
-    if (toggleTimeout) {
-      clearTimeout(toggleTimeout)
-    }
-    
-    const timeout = setTimeout(() => {
-      setIsDemoMode(!isDemoMode)
-      setToggleTimeout(null)
-    }, 100) // 100ms debounce
-    
-    setToggleTimeout(timeout)
-  }
-
-  // Sync data dựa trên mode với smooth transition
   useEffect(() => {
-    setIsModeSwitching(true)
-    
-    // Debug logging
-    console.log('Payments Mode switching:', { isDemoMode })
-    
-    // Simulate loading delay for smooth transition
-    const timer = setTimeout(() => {
-      if (isDemoMode) {
-        // Demo mode: sử dụng mock data
-        console.log('Using mock data for demo mode')
-        setRows(mock)
-      } else {
-        // Live mode: API chưa implement, hiển thị empty
-        console.log('Live mode - API not implemented, showing empty data')
-        setRows([])
-      }
-      setIsModeSwitching(false)
-    }, 300) // 300ms delay for smooth transition
-    
-    return () => clearTimeout(timer)
-  }, [isDemoMode])
+    refetchPayments()
+  }, [])
+
+  async function refetchPayments() {
+    try {
+      const res = await fetch('/api/system/payments', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (Array.isArray(data)) setRows(data as Payment[])
+      else if (Array.isArray(data?.items)) setRows(data.items as Payment[])
+      else setRows([])
+    } catch {
+      setRows([])
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -137,18 +105,19 @@ export default function PaymentsPage() {
       note: edit.note.trim() || undefined,
     }
 
-    if (isDemoMode) {
-      // Demo mode: cập nhật local state
+    try {
       if (edit.id) {
-        setRows(rs => rs.map(r => r.id === edit.id ? payload : r))
-        setFlash({ type: 'success', text: 'Đã cập nhật giao dịch (Demo).' })
+        const resp = await fetch('/api/system/payments', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        if (!resp.ok) throw new Error('Cập nhật giao dịch thất bại')
+        setFlash({ type: 'success', text: 'Đã cập nhật giao dịch.' })
       } else {
-        setRows(rs => [...rs, payload])
-        setFlash({ type: 'success', text: 'Đã tạo giao dịch mới (Demo).' })
+        const resp = await fetch('/api/system/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        if (!resp.ok) throw new Error('Tạo giao dịch mới thất bại')
+        setFlash({ type: 'success', text: 'Đã tạo giao dịch mới.' })
       }
-    } else {
-      // Live mode: API chưa implement
-      setFlash({ type: 'error', text: 'API thanh toán chưa được triển khai. Vui lòng thử lại sau.' })
+      await refetchPayments()
+    } catch (e: any) {
+      setFlash({ type: 'error', text: e.message || 'Có lỗi xảy ra' })
       return
     }
     
@@ -158,13 +127,13 @@ export default function PaymentsPage() {
   async function doDelete() { 
     if (!confirmOpen.id) return
     
-    if (isDemoMode) {
-      // Demo mode: xóa khỏi local state
-      setRows(rs => rs.filter(r => r.id !== confirmOpen.id))
-      setFlash({ type: 'success', text: 'Đã xóa giao dịch (Demo).' })
-    } else {
-      // Live mode: API chưa implement
-      setFlash({ type: 'error', text: 'API thanh toán chưa được triển khai. Vui lòng thử lại sau.' })
+    try {
+      const resp = await fetch(`/api/system/payments?id=${confirmOpen.id}`, { method: 'DELETE' })
+      if (!resp.ok) throw new Error('Xóa giao dịch thất bại')
+      setFlash({ type: 'success', text: 'Đã xóa giao dịch.' })
+      await refetchPayments()
+    } catch (e: any) {
+      setFlash({ type: 'error', text: e.message || 'Có lỗi xảy ra' })
       return
     }
     
@@ -571,23 +540,6 @@ export default function PaymentsPage() {
           </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Demo Mode Toggle */}
-            <Button 
-              onClick={handleModeToggle}
-              disabled={isModeSwitching}
-              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              } ${isModeSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline ml-1">
-                {isModeSwitching ? 'Đang chuyển...' : (isDemoMode ? 'Demo Mode' : 'Live Mode')}
-              </span>
-            </Button>
             
             <Button 
               onClick={openCreate} 
@@ -662,37 +614,7 @@ export default function PaymentsPage() {
           </div>
         )}
 
-          {/* Mode Indicator */}
-          <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm transition-all duration-300 ${
-            isDemoMode 
-              ? 'bg-orange-50 border-orange-200 text-orange-800' 
-              : 'bg-green-50 border-green-200 text-green-800'
-          } ${isModeSwitching ? 'opacity-75' : ''}`}>
-            <div className="flex items-center gap-2">
-              {isModeSwitching ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              )}
-              <span className="font-medium">
-                {isModeSwitching ? 'Đang chuyển đổi...' : (isDemoMode ? 'Chế độ Demo' : 'Chế độ Live')}
-              </span>
-              {!isDemoMode && !isModeSwitching && (
-                <div className="flex items-center gap-1 ml-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-xs text-yellow-600">API chưa triển khai</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* API Not Implemented Notice */}
-          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-            <div className="font-medium">API chưa được triển khai</div>
-            <div className="mt-1">Tính năng quản lý thanh toán đang được phát triển. Hiện tại chỉ có thể xem giao diện demo.</div>
-          </div>
+          {/* Removed Demo/Live indicator and API notice */}
 
         {/* Filters */}
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">

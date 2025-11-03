@@ -20,16 +20,13 @@ type StaffTask = {
   status: TaskStatus
   description?: string
   created_at: string
+  isActive?: boolean
 }
 
-const mock: StaffTask[] = [
-  { id: 1, title: 'Dọn phòng A101', assignee: 'Nguyễn Văn A', due_date: '2025-10-20', priority: 'MEDIUM', status: 'IN_PROGRESS', created_at: '2025-10-18T09:00:00' },
-  { id: 2, title: 'Sửa điều hòa B201', assignee: 'Trần Thị B', due_date: '2025-10-21', priority: 'HIGH', status: 'TODO', created_at: '2025-10-18T11:30:00' },
-  { id: 3, title: 'Thay bóng đèn C301', assignee: 'Lê Văn C', due_date: '2025-10-19', priority: 'LOW', status: 'DONE', created_at: '2025-10-17T15:10:00' },
-]
+// Remove mock; always use API
 
 export default function TasksPage() {
-  const [rows, setRows] = useState<StaffTask[]>(mock)
+  const [rows, setRows] = useState<StaffTask[]>([])
   const [flash, setFlash] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const [query, setQuery] = useState("")
@@ -46,45 +43,23 @@ export default function TasksPage() {
   const [edit, setEdit] = useState<{ id?: number, title: string, assignee: string, due_date: string, priority: TaskPriority, status: TaskStatus, description: string }>({ title: '', assignee: '', due_date: '', priority: 'MEDIUM', status: 'TODO', description: '' })
   const [confirmOpen, setConfirmOpen] = useState<{ open: boolean, id?: number }>({ open: false })
 
-  // Demo/Live mode
-  const [isDemoMode, setIsDemoMode] = useState(true)
-  const [loadingLive, setLoadingLive] = useState(false)
-
-  // Sync dữ liệu Demo/Live với fallback
-  useEffect(() => {
-    if (isDemoMode) {
-      setRows(mock)
-      return
-    }
-    let aborted = false
-    const fetchLive = async () => {
-      setLoadingLive(true)
-      // Clear any demo rows immediately when switching to Live
+  const [loading, setLoading] = useState(false)
+  async function refetchTasks() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/system/tasks', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (Array.isArray(data)) setRows(data)
+      else if (Array.isArray(data?.items)) setRows(data.items)
+      else setRows([])
+    } catch {
       setRows([])
-      try {
-        const res = await fetch('/api/system/tasks', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
-        if (aborted) return
-        if (Array.isArray(data)) {
-          setRows(data)
-        } else if (Array.isArray(data.items)) {
-          setRows(data.items)
-        } else {
-          // Không hiển thị gì nếu payload không hợp lệ
-          setRows([])
-        }
-      } catch (e: any) {
-        if (aborted) return
-        // Không fallback: không hiển thị gì cả
-        setRows([])
-      } finally {
-        if (!aborted) setLoadingLive(false)
-      }
+    } finally {
+      setLoading(false)
     }
-    fetchLive()
-    return () => { aborted = true }
-  }, [isDemoMode])
+  }
+  useEffect(() => { refetchTasks() }, [])
 
   useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 3000); return () => clearTimeout(t) }, [flash])
 
@@ -127,21 +102,30 @@ export default function TasksPage() {
   async function doDelete() {
     if (!confirmOpen.id) return
     const id = confirmOpen.id
-    if (isDemoMode) {
-      setRows(rs => rs.filter(r => r.id !== id))
-      setConfirmOpen({ open: false })
-      setFlash({ type: 'success', text: 'Đã xóa công việc (Demo Mode).' })
-      return
-    }
     try {
       const res = await fetch(`/api/system/tasks?id=${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Xóa công việc thất bại')
-      setRows(rs => rs.filter(r => r.id !== id))
-      setFlash({ type: 'success', text: 'Đã xóa công việc.' })
+      if (!res.ok) throw new Error('Vô hiệu hóa công việc thất bại')
+      await refetchTasks()
+      setFlash({ type: 'success', text: 'Đã vô hiệu hóa công việc.' })
     } catch (e: any) {
       setFlash({ type: 'error', text: e.message || 'Có lỗi xảy ra' })
     } finally {
       setConfirmOpen({ open: false })
+    }
+  }
+
+  async function activateTask(id: number) {
+    try {
+      const res = await fetch(`/api/system/tasks`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ id, isActive: true })
+      })
+      if (!res.ok) throw new Error('Kích hoạt công việc thất bại')
+      await refetchTasks()
+      setFlash({ type: 'success', text: 'Đã kích hoạt công việc.' })
+    } catch (e: any) {
+      setFlash({ type: 'error', text: e.message || 'Có lỗi xảy ra' })
     }
   }
 
@@ -160,51 +144,16 @@ export default function TasksPage() {
       description: edit.description.trim() || undefined
     }
 
-    if (isDemoMode) {
-      const item: StaffTask = {
-        id: edit.id ?? (rows.length ? Math.max(...rows.map(r => r.id)) + 1 : 1),
-        title: payload.title!,
-        assignee: payload.assignee!,
-        due_date: payload.due_date,
-        priority: payload.priority as TaskPriority,
-        status: payload.status as TaskStatus,
-        description: payload.description,
-      created_at: edit.id ? rows.find(r => r.id === edit.id)!.created_at : new Date().toISOString(),
-      }
-      if (edit.id) {
-        setRows(rs => rs.map(r => r.id === edit.id ? item : r))
-        setFlash({ type: 'success', text: 'Đã cập nhật công việc (Demo Mode).' })
-      } else {
-        setRows(rs => [...rs, item])
-        setFlash({ type: 'success', text: 'Đã tạo công việc mới (Demo Mode).' })
-      }
-      setEditOpen(false)
-      return
-    }
-
     try {
       if (edit.id) {
         const res = await fetch('/api/system/tasks', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         if (!res.ok) throw new Error('Cập nhật công việc thất bại')
-        // optimistic update
-        setRows(rs => rs.map(r => r.id === edit.id ? { ...(r as StaffTask), ...payload } as StaffTask : r))
+        await refetchTasks()
         setFlash({ type: 'success', text: 'Đã cập nhật công việc.' })
       } else {
         const res = await fetch('/api/system/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         if (!res.ok) throw new Error('Tạo công việc thất bại')
-        const created = await res.json()
-        // fallback if API doesn't return created entity
-        const newItem: StaffTask = created?.id ? created : {
-          id: rows.length ? Math.max(...rows.map(r => r.id)) + 1 : 1,
-          title: payload.title!,
-          assignee: payload.assignee!,
-          due_date: payload.due_date,
-          priority: payload.priority as TaskPriority,
-          status: payload.status as TaskStatus,
-          description: payload.description,
-          created_at: new Date().toISOString(),
-        }
-        setRows(rs => [...rs, newItem])
+        await refetchTasks()
         setFlash({ type: 'success', text: 'Đã tạo công việc mới.' })
       }
     setEditOpen(false)
@@ -230,21 +179,6 @@ export default function TasksPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setIsDemoMode(!isDemoMode)}
-              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline ml-1">
-                {isDemoMode ? 'Demo Mode' : 'Live Mode'}
-              </span>
-            </Button>
             <Button 
               onClick={openCreate} 
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm flex-shrink-0 rounded-lg"
@@ -283,32 +217,7 @@ export default function TasksPage() {
           </div>
         )}
 
-        {/* Mode Indicator */}
-        <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
-          isDemoMode 
-            ? 'bg-orange-50 border-orange-200 text-orange-800' 
-            : 'bg-green-50 border-green-200 text-green-800'
-        }`}>
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-semibold">
-              {isDemoMode ? 'Chế độ Demo' : 'Chế độ Live'}
-            </span>
-            <span className="text-xs opacity-75">
-              {isDemoMode 
-                ? 'Đang sử dụng dữ liệu ảo để demo' 
-                : (loadingLive ? 'Đang tải dữ liệu từ API…' : 'Đang kết nối với API thật')}
-            </span>
-            {!isDemoMode && loadingLive && (
-              <div className="flex items-center gap-1 ml-auto">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                <span className="text-xs">Đang tải...</span>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Removed Demo/Live indicator */}
 
         {/* Filters - match admin pattern */}
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
@@ -448,6 +357,7 @@ export default function TasksPage() {
                     <th className="px-4 py-3 text-center font-semibold">Hạn</th>
                     <th className="px-4 py-3 text-center font-semibold">Ưu tiên</th>
                     <th className="px-4 py-3 text-center font-semibold">Trạng thái</th>
+                    <th className="px-4 py-3 text-center font-semibold">Kích hoạt</th>
                     <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
                 </tr>
               </thead>
@@ -462,10 +372,25 @@ export default function TasksPage() {
                       <td className="px-4 py-3 text-center">{renderPriorityBadge(r.priority)}</td>
                       <td className="px-4 py-3 text-center">{renderStatusBadge(r.status)}</td>
                       <td className="px-4 py-3 text-center">
+                        {r.isActive !== false ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Hoạt động
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Vô hiệu
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
                         <div className="flex gap-2 justify-center">
                           <Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => { setSelected(r); setDetailOpen(true) }}>Xem</Button>
                           <Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => openEditRow(r)}>Sửa</Button>
-                          <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => confirmDelete(r.id)}>Xóa</Button>
+                          {r.isActive !== false ? (
+                            <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => confirmDelete(r.id)}>Vô hiệu</Button>
+                          ) : (
+                            <Button className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700" onClick={() => activateTask(r.id)}>Kích hoạt</Button>
+                          )}
                       </div>
                     </td>
                   </tr>
@@ -530,7 +455,11 @@ export default function TasksPage() {
                       <div className="grid grid-cols-3 gap-2">
                         <Button variant="secondary" className="h-10 text-xs font-medium px-2" onClick={() => { setSelected(r); setDetailOpen(true) }}>Xem</Button>
                         <Button className="h-10 text-xs font-medium px-2" onClick={() => openEditRow(r)}>Sửa</Button>
-                        <Button variant="danger" className="h-10 text-xs font-medium px-2" onClick={() => confirmDelete(r.id)}>Xóa</Button>
+                        {r.isActive !== false ? (
+                          <Button variant="danger" className="h-10 text-xs font-medium px-2" onClick={() => confirmDelete(r.id)}>Vô hiệu</Button>
+                        ) : (
+                          <Button className="h-10 text-xs font-medium px-2 bg-green-600 hover:bg-green-700" onClick={() => activateTask(r.id)}>Kích hoạt</Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -720,15 +649,15 @@ export default function TasksPage() {
       <Modal
         open={confirmOpen.open}
         onClose={() => setConfirmOpen({ open: false })}
-        title="Xác nhận xóa"
+        title="Xác nhận vô hiệu hóa"
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setConfirmOpen({ open: false })}>Hủy</Button>
-            <Button variant="danger" onClick={doDelete}>Xóa</Button>
+            <Button variant="danger" onClick={doDelete}>Vô hiệu hóa</Button>
           </div>
         }
       >
-        <div className="text-sm text-gray-700">Bạn có chắc muốn xóa công việc này?</div>
+        <div className="text-sm text-gray-700">Bạn có chắc muốn vô hiệu hóa công việc này? Công việc sẽ không bị xóa và có thể được kích hoạt lại sau.</div>
       </Modal>
       </div>
     </>

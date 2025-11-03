@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiClient } from '@/lib/api-client'
+import { API_CONFIG } from '@/lib/config'
+const BASE = API_CONFIG.BASE_URL
 
 // GET - Fetch all room types or specific room type by ID
 export async function GET(request: NextRequest) {
@@ -21,24 +23,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: response.error }, { status: 500 });
     }
 
-    // Get all room types (default)
-    const backendResponse = await fetch('http://103.81.87.99:5656/api/room-types', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'accept': '*/*'
-      }
-    })
-    
-    if (backendResponse.ok) {
-      const data = await backendResponse.json()
-      return NextResponse.json(data.data)
-    } else {
-      return NextResponse.json(
-        { error: `Backend error: ${backendResponse.status}` },
-        { status: 500 }
-      )
-    }
+    // Get all room types (default) via configured BASE
+    const res = await fetch(`${BASE}/room-types`, { headers: { 'Content-Type': 'application/json', accept: '*/*' }, cache: 'no-store' })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) return NextResponse.json({ error: data?.message || `Backend error: ${res.status}` }, { status: 500 })
+    return NextResponse.json(data?.data ?? data)
   } catch (error) {
     console.error('Error fetching room types:', error)
     return NextResponse.json(
@@ -62,29 +51,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Call backend directly
-    const backendResponse = await fetch('http://103.81.87.99:5656/api/room-types', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'accept': '*/*'
-      },
-      body: JSON.stringify({
-        code,
-        name,
-        basePrice: basePrice || 0,
-        maxOccupancy: maxOccupancy || 1,
-        description: description || ''
-      })
-    })
-    
-    if (backendResponse.ok) {
-      const data = await backendResponse.json()
-      return NextResponse.json(data.data, { status: 201 })
-    } else {
-      const errorText = await backendResponse.text()
-      return NextResponse.json({ error: `Backend error: ${backendResponse.status}` }, { status: 500 })
-    }
+    const res = await fetch(`${BASE}/room-types`, { method: 'POST', headers: { 'Content-Type': 'application/json', accept: '*/*' }, body: JSON.stringify({ code, name, basePrice: basePrice || 0, maxOccupancy: maxOccupancy || 1, description: description || '' }) })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) return NextResponse.json({ error: data?.message || `Backend error: ${res.status}` }, { status: 500 })
+    return NextResponse.json(data?.data ?? data, { status: 201 })
   } catch (error) {
     console.error('Error creating room type:', error)
     return NextResponse.json(
@@ -115,8 +85,8 @@ export async function PUT(request: NextRequest) {
       maxOccupancy: maxOccupancy || 1,
       description: description || ''
     })
-
-    return NextResponse.json(response)
+    if (!response.success) return NextResponse.json({ error: response.error || 'Failed to update room type' }, { status: 500 })
+    return NextResponse.json(response.data)
   } catch (error) {
     console.error('Error updating room type:', error)
     return NextResponse.json(
@@ -141,8 +111,8 @@ export async function DELETE(request: NextRequest) {
 
     // Delete room type via API client
     const response = await apiClient.deleteRoomType(parseInt(id))
-
-    return NextResponse.json(response)
+    if (!response.success) return NextResponse.json({ error: response.error || 'Failed to delete room type' }, { status: 500 })
+    return NextResponse.json(response.data ?? { success: true })
   } catch (error) {
     console.error('Error deleting room type:', error)
     return NextResponse.json(

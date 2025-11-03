@@ -26,61 +26,31 @@ type ReportResponse = {
 
 export default function ReportsPage() {
   const [data, setData] = useState<ReportResponse>({ summary: { totalBookings: 0, totalRevenue: 0, totalServices: 0, openTasks: 0 }, items: [] })
-  const [isDemoMode, setIsDemoMode] = useState(true)
-  const [loadingLive, setLoadingLive] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [query, setQuery] = useState("")
   const [activeTab, setActiveTab] = useState<'overview'|'revenue'|'bookings'|'services'|'tasks'>('overview')
 
-  // Local mock fallback for Demo mode
-  function buildLocalMock(): ReportResponse {
-    const items: ReportItem[] = [
-      { id: 1, date: '2025-10-24', type: 'BOOKING', title: 'Đặt phòng mới', count: 12 },
-      { id: 2, date: '2025-10-24', type: 'PAYMENT', title: 'Thanh toán', amount: 1 },
-      { id: 3, date: '2025-10-24', type: 'SERVICE', title: 'Dịch vụ giặt ủi', amount: 1 },
-      { id: 4, date: '2025-10-24', type: 'TASK', title: 'Công việc đang mở', count: 7 },
-      { id: 5, date: '2025-10-23', type: 'BOOKING', title: 'Đặt phòng mới', count: 9 },
-      { id: 6, date: '2025-10-23', type: 'PAYMENT', title: 'Thanh toán', amount: 1 },
-    ]
-    const totalBookings = items.filter(i => i.type === 'BOOKING').reduce((s, i) => s + (i.count || 0), 0)
-    const totalRevenue = items.filter(i => i.type === 'PAYMENT' || i.type === 'SERVICE').reduce((s, i) => s + (i.amount || 0), 0)
-    const totalServices = items.filter(i => i.type === 'SERVICE').length
-    const openTasks = items.filter(i => i.type === 'TASK').reduce((s, i) => s + (i.count || 0), 0)
-    return { summary: { totalBookings, totalRevenue, totalServices, openTasks }, items }
-  }
+  // Removed local mock; always use API
 
   useEffect(() => {
     let aborted = false
     const fetchData = async () => {
-      if (isDemoMode) {
-        // Demo từ API mock, fallback local nếu API rỗng hoặc lỗi
-        try {
-          const res = await fetch('/api/system/reports')
-          const json = await res.json()
-          if (aborted) return
-          if (json && Array.isArray(json.items) && json.items.length > 0) {
-            setData(json)
-          } else {
-            setData(buildLocalMock())
-          }
-        } catch {
-          if (!aborted) setData(buildLocalMock())
-        }
-        return
-      }
-      setLoadingLive(true)
+      setLoading(true)
       try {
         const res = await fetch('/api/system/reports', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
         const json = await res.json()
         if (!aborted) setData(json)
+      } catch {
+        if (!aborted) setData({ summary: { totalBookings: 0, totalRevenue: 0, totalServices: 0, openTasks: 0 }, items: [] })
       } finally {
-        if (!aborted) setLoadingLive(false)
+        if (!aborted) setLoading(false)
       }
     }
     fetchData()
     return () => { aborted = true }
-  }, [isDemoMode])
+  }, [])
 
   const filtered = useMemo(() => {
     let items = data.items
@@ -229,21 +199,6 @@ export default function ReportsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              onClick={() => setIsDemoMode(!isDemoMode)}
-              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline ml-1">
-                {isDemoMode ? 'Demo Mode' : 'Live Mode'}
-              </span>
-            </Button>
             <button
               aria-label="Xuất Excel (CSV)"
               title="Xuất Excel (CSV)"
@@ -268,33 +223,12 @@ export default function ReportsPage() {
       {/* Content */}
       <div className="w-full px-4 py-3">
         <div className="space-y-3">
-          {/* Mode Indicator */}
-          <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
-            isDemoMode 
-              ? 'bg-orange-50 border-orange-200 text-orange-800' 
-              : 'bg-green-50 border-green-200 text-green-800'
-          }`}>
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-semibold">
-                {isDemoMode ? 'Chế độ Demo' : 'Chế độ Live'}
-              </span>
-              <span className="text-xs opacity-75">
-                {isDemoMode 
-                  ? 'Đang sử dụng dữ liệu ảo để demo' 
-                  : 'Đang kết nối với API thật'
-                }
-              </span>
-              {loadingLive && (
-                <div className="flex items-center gap-1 ml-auto">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                  <span className="text-xs">Đang tải...</span>
-                </div>
-              )}
+          {/* Loading indicator */}
+          {loading && (
+            <div className="rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm bg-yellow-50 border-yellow-200 text-yellow-800">
+              Đang tải dữ liệu báo cáo...
             </div>
-          </div>
+          )}
 
           {/* Controls & Filters */}
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 rounded-lg">

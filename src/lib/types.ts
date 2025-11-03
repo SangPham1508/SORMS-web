@@ -35,6 +35,7 @@ export interface RoomType {
   description?: string;
   basePrice: number;
   maxOccupancy: number;
+  isActive?: boolean;
   createdDate?: string;
   lastModifiedDate?: string;
 }
@@ -47,6 +48,7 @@ export interface Room {
   floor?: number;
   status: RoomStatus;
   description?: string;
+  isActive?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +65,7 @@ export interface Booking {
   numGuests: number;
   note?: string;
   status: BookingStatus;
+  isActive?: boolean;
   created_at: string;
   updated_at: string;
 }

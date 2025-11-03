@@ -96,14 +96,19 @@ export default function ServicesPage() {
       setFlash({ type: 'error', text: 'Vui lòng nhập Đơn vị.' })
       return
     }
+    if (edit.unitPrice === undefined || edit.unitPrice === null || isNaN(edit.unitPrice)) {
+      setFlash({ type: 'error', text: 'Vui lòng nhập giá dịch vụ.' })
+      return
+    }
     if (edit.unitPrice < 0) {
       setFlash({ type: 'error', text: 'Giá dịch vụ không được âm.' })
       return
     }
+    // Giá 0 là hợp lệ (dịch vụ miễn phí)
     const payload = {
       code: edit.code.trim(),
       name: edit.name.trim(),
-      unitPrice: edit.unitPrice,
+      unitPrice: edit.unitPrice ?? 0, // Đảm bảo giá luôn là số, mặc định 0 nếu undefined/null
       unitName: edit.unitName.trim(),
       description: edit.description.trim() || '',
       isActive: edit.isActive,
@@ -111,6 +116,7 @@ export default function ServicesPage() {
     
     console.log('Saving service with payload:', payload)
     console.log('Edit state:', edit)
+    console.log('Unit price value:', edit.unitPrice, 'Type:', typeof edit.unitPrice)
     
     try {
       if (edit.id) {
@@ -197,11 +203,33 @@ export default function ServicesPage() {
     await fetch(`/api/system/services?id=${confirmOpen.id}`, { method: 'DELETE' })
     await refetchServices()
     setConfirmOpen({ open: false })
-    setFlash({ type: 'success', text: 'Đã xóa dịch vụ.' })
+    setFlash({ type: 'success', text: 'Đã vô hiệu hóa dịch vụ.' })
+  }
+
+  async function activateService(id: number) {
+    try {
+      const resp = await fetch(`/api/system/services/${id}/activate`, { method: 'PUT' })
+      if (!resp.ok) throw new Error('Kích hoạt dịch vụ thất bại')
+      setFlash({ type: 'success', text: 'Đã kích hoạt dịch vụ thành công.' })
+      await refetchServices()
+    } catch (e) {
+      setFlash({ type: 'error', text: e instanceof Error ? e.message : 'Có lỗi xảy ra' })
+    }
   }
 
   function renderActiveChip(isActive: boolean) {
     return isActive ? <Badge tone="success">ACTIVE</Badge> : <Badge tone="muted">INACTIVE</Badge>
+  }
+
+  function renderPrice(price: number) {
+    if (price === 0 || price === null || price === undefined) {
+      return (
+        <span className="text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-md">
+          Miễn phí
+        </span>
+      )
+    }
+    return <span className="text-gray-700">{price.toLocaleString('vi-VN')} VND</span>
   }
 
   return (
@@ -398,7 +426,7 @@ export default function ServicesPage() {
                           <tr key={row.id} className="hover:bg-gray-50 border-b border-gray-100">
                             <td className="px-4 py-3 text-center font-medium text-gray-900">{row.code}</td>
                             <td className="px-4 py-3 text-center text-gray-700">{row.name}</td>
-                            <td className="px-4 py-3 text-center text-gray-700">{row.unitPrice.toLocaleString('vi-VN')} VND</td>
+                            <td className="px-4 py-3 text-center">{renderPrice(row.unitPrice)}</td>
                             <td className="px-4 py-3 text-center text-gray-700">{row.unitName}</td>
                             <td className="px-4 py-3 text-center">{renderActiveChip(row.isActive)}</td>
                             <td className="px-4 py-3 text-center">
@@ -419,13 +447,22 @@ export default function ServicesPage() {
                                 >
                                   Sửa
                                 </Button>
-                                <Button
-                                  variant="danger"
-                                  className="h-8 px-3 text-xs"
-                                  onClick={() => confirmDelete(row.id)}
-                                >
-                                  Xóa
-                                </Button>
+                                {row.isActive ? (
+                                  <Button
+                                    variant="danger"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => confirmDelete(row.id)}
+                                  >
+                                    Vô hiệu
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700"
+                                    onClick={() => activateService(row.id)}
+                                  >
+                                    Kích hoạt
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -470,9 +507,15 @@ export default function ServicesPage() {
                   d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
                 />
               </svg>
-              <span className="text-sm font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full text-center">
-                {row.unitPrice.toLocaleString("vi-VN")} VND
-              </span>
+              {row.unitPrice === 0 ? (
+                <span className="text-sm font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-center">
+                  Miễn phí
+                </span>
+              ) : (
+                <span className="text-sm font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full text-center">
+                  {row.unitPrice.toLocaleString("vi-VN")} VND
+                </span>
+              )}
             </div>
 
             {/* Đơn vị */}
@@ -556,14 +599,15 @@ export default function ServicesPage() {
             Sửa
           </Button>
 
-          <Button
-            variant="danger"
-            className="h-9 text-xs font-medium"
-            onClick={() => confirmDelete(row.id)}
-          >
-            <svg
-              className="w-3 h-3 mr-1"
-              fill="none"
+          {row.isActive ? (
+            <Button
+              variant="danger"
+              className="h-9 text-xs font-medium"
+              onClick={() => confirmDelete(row.id)}
+            >
+              <svg
+                className="w-3 h-3 mr-1"
+                fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
@@ -571,11 +615,32 @@ export default function ServicesPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
               />
             </svg>
-            Xóa
+            Vô hiệu
           </Button>
+          ) : (
+            <Button
+              className="h-9 text-xs font-medium bg-green-600 hover:bg-green-700"
+              onClick={() => activateService(row.id)}
+            >
+              <svg
+                className="w-3 h-3 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Kích hoạt
+            </Button>
+          )}
         </div>
       </div>
     ))}
@@ -691,9 +756,15 @@ export default function ServicesPage() {
                       </svg>
                       <span className="text-xs sm:text-sm font-semibold text-blue-700 uppercase">Giá dịch vụ</span>
                 </div>
-                    <p className="text-base sm:text-lg font-bold text-blue-900">
-                      {selected.unitPrice.toLocaleString('vi-VN')} VND
-                    </p>
+                    {selected.unitPrice === 0 ? (
+                      <p className="text-base sm:text-lg font-bold text-green-600 bg-green-50 px-3 py-1 rounded-lg inline-block">
+                        Miễn phí
+                      </p>
+                    ) : (
+                      <p className="text-base sm:text-lg font-bold text-blue-900">
+                        {selected.unitPrice.toLocaleString('vi-VN')} VND
+                      </p>
+                    )}
                 </div>
                 </div>
               </div>
@@ -737,12 +808,36 @@ export default function ServicesPage() {
                   <Input
                     type="number"
                     min="0"
-                    value={edit.unitPrice}
+                    step="1"
+                    value={edit.unitPrice === 0 || edit.unitPrice === null || edit.unitPrice === undefined ? '0' : String(edit.unitPrice)}
                     onChange={(e) => {
-                      const newPrice = Number(e.target.value)
-                      setEdit({ ...edit, unitPrice: newPrice })
+                      const value = e.target.value
+                      // Nếu input trống, set về 0 để user có thể nhập lại
+                      if (value === '' || value === null || value === undefined) {
+                        setEdit({ ...edit, unitPrice: 0 })
+                        return
+                      }
+                      const newPrice = Number(value)
+                      // Chỉ cập nhật nếu là số hợp lệ và >= 0 (cho phép cả 0)
+                      if (!isNaN(newPrice) && newPrice >= 0) {
+                        setEdit({ ...edit, unitPrice: newPrice })
+                      }
                     }}
-                    placeholder="Nhập giá dịch vụ"
+                    onBlur={(e) => {
+                      // Khi blur (rời khỏi input), normalize giá trị
+                      const value = e.target.value
+                      if (value === '' || isNaN(Number(value))) {
+                        // Nếu trống hoặc không hợp lệ, set về 0
+                        setEdit({ ...edit, unitPrice: 0 })
+                      } else {
+                        const numValue = Number(value)
+                        // Đảm bảo giá không âm
+                        if (numValue < 0) {
+                          setEdit({ ...edit, unitPrice: 0 })
+                        }
+                      }
+                    }}
+                    placeholder="Nhập giá dịch vụ (0 cho dịch vụ miễn phí)"
                     className="w-full"
                   />
                 </div>
@@ -804,16 +899,18 @@ export default function ServicesPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal open={confirmOpen.open} onClose={() => setConfirmOpen({ open: false })} title="Xác nhận xóa">
+      <Modal open={confirmOpen.open} onClose={() => setConfirmOpen({ open: false })} title="Xác nhận vô hiệu hóa">
         <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Xác nhận xóa</h2>
-          <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa dịch vụ này không?</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Xác nhận vô hiệu hóa</h2>
+          <p className="text-gray-600 mb-6">
+            Bạn có chắc muốn vô hiệu hóa dịch vụ này? Dịch vụ sẽ không bị xóa hoàn toàn và có thể được kích hoạt lại sau.
+          </p>
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setConfirmOpen({ open: false })}>
               Hủy
             </Button>
             <Button variant="danger" onClick={doDelete}>
-              Xóa
+              Vô hiệu hóa
             </Button>
           </div>
         </div>

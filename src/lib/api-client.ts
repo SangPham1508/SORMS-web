@@ -235,7 +235,8 @@ class ApiClient {
   }
 
   async deleteRoom(id: number) {
-    return this.delete(`/rooms/${id}`)
+    // Soft delete: deactivate instead of hard delete
+    return this.put(`/rooms/${id}/deactivate`)
   }
 
   // Additional room methods for filtering
@@ -279,7 +280,8 @@ class ApiClient {
   }
 
   async deleteRoomType(id: number) {
-    return this.delete(`/room-types/${id}`)
+    // Soft delete: deactivate instead of hard delete
+    return this.put(`/room-types/${id}/deactivate`)
   }
 
   async getBookings() {
@@ -327,7 +329,8 @@ class ApiClient {
   }
 
   async deleteBooking(id: number) {
-    return this.delete(`/bookings/${id}`)
+    // Soft delete: deactivate instead of hard delete
+    return this.put(`/bookings/${id}/deactivate`)
   }
 
   // Additional booking methods for filtering and actions
@@ -381,7 +384,8 @@ class ApiClient {
   }
 
   async deleteService(id: number) {
-    return this.delete(`/services/${id}`)
+    // Soft delete: deactivate instead of hard delete
+    return this.put(`/services/${id}/deactivate`)
   }
 
   // Placeholder methods for future implementation
@@ -559,7 +563,8 @@ class ApiClient {
   }
 
   async deleteCheckin(id: number) {
-    return this.delete(`/checkins/${id}`)
+    // Soft delete: deactivate instead of hard delete
+    return this.put(`/checkins/${id}/deactivate`)
   }
 
   async getCheckin(id: number) {

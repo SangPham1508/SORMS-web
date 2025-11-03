@@ -52,7 +52,7 @@ const formatDateRange = (dateRange: DateRange) => {
 
 function Card({ title, actions, children, className = "" }: { title?: string; actions?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border bg-white/80 backdrop-blur-sm shadow-lg p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group ${className}`}>
+    <div className={`rounded-2xl border border-gray-200/50 bg-white/80 backdrop-blur-sm shadow-lg p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group ${className}`}>
       {(title || actions) && (
         <div className="mb-6 flex items-center justify-between">
           {title && (
@@ -411,6 +411,7 @@ export default function AdminHome() {
   const [paymentsSeries, setPaymentsSeries] = useState<{ date: string; sum: number }[]>([]);
   const [servicesTop, setServicesTop] = useState<{ name: string; count: number }[]>([]);
   const [tasksSummary, setTasksSummary] = useState<TasksResp>({ todo: 0, in_progress: 0, done: 0, cancelled: 0 });
+  const [apiLoaded, setApiLoaded] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -511,6 +512,7 @@ export default function AdminHome() {
           setPaymentsSeries(p.series);
           setServicesTop(so.top);
           setTasksSummary(t);
+          setApiLoaded(true);
         } catch (err) {
           // Don't set error if request was aborted
           if (err instanceof Error && err.name === 'AbortError') {
@@ -520,6 +522,7 @@ export default function AdminHome() {
           
           console.error('Dashboard fetch error:', err);
           setError(`Không tải được dữ liệu: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+          setApiLoaded(false);
         } finally {
           // Only set loading to false if not aborted
           if (!ac.signal.aborted) {
@@ -542,6 +545,14 @@ export default function AdminHome() {
   const daysRange = useMemo(() => {
     return Math.ceil((new Date(dateRange.toDate).getTime() - new Date(dateRange.fromDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
   }, [dateRange]);
+
+  const revenueTrend = useMemo(() => {
+    if (paymentsSeries.length < 2) return undefined;
+    const last = paymentsSeries[paymentsSeries.length - 1].sum;
+    const prevAvg = Math.max(1, Math.round((paymentsSeries.slice(0, -1).reduce((s, x) => s + x.sum, 0)) / (paymentsSeries.length - 1)));
+    const diffPct = Math.round(((last - prevAvg) / prevAvg) * 100);
+    return { value: Math.abs(diffPct), isPositive: diffPct >= 0 } as { value: number; isPositive: boolean };
+  }, [paymentsSeries]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -590,6 +601,9 @@ export default function AdminHome() {
             </button>
           </div>
         )}
+        {!loading && !error && apiLoaded && (
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs text-green-700">Dữ liệu đã được tải từ API</div>
+        )}
 
         {/* KPIs */}
         <section className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -608,7 +622,6 @@ export default function AdminHome() {
                 hint={`${occupancyPercent}% đang ở`}
                 icon="🏨"
                 color="blue"
-                trend={{ value: 12, isPositive: true }}
               />
               <KPICard 
                 title="Đặt phòng chờ" 
@@ -616,7 +629,6 @@ export default function AdminHome() {
                 hint="Cần xử lý"
                 icon="⏳"
                 color="orange"
-                trend={{ value: 5, isPositive: false }}
               />
               <KPICard 
                 title="Doanh thu hôm nay" 
@@ -624,7 +636,7 @@ export default function AdminHome() {
                 hint={`${kpis.paymentsToday} giao dịch`}
                 icon="💰"
                 color="green"
-                trend={{ value: 8, isPositive: true }}
+                trend={revenueTrend}
               />
               <KPICard 
                 title="Công việc đang chờ" 
@@ -632,7 +644,6 @@ export default function AdminHome() {
                 hint="Cần thực hiện"
                 icon="📋"
                 color="purple"
-                trend={{ value: 3, isPositive: false }}
               />
             </>
           )}

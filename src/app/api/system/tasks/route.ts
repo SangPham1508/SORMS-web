@@ -12,6 +12,7 @@ type StaffTask = {
   status: TaskStatus
   description?: string
   created_at: string
+  isActive: boolean
 }
 
 let tasks: StaffTask[] = []
@@ -19,7 +20,11 @@ let tasks: StaffTask[] = []
 const nextId = () => (tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1)
 
 export async function GET(req: NextRequest) {
-  return NextResponse.json(tasks)
+  // Only return active tasks by default
+  const { searchParams } = new URL(req.url)
+  const showInactive = searchParams.get('showInactive') === 'true'
+  const filteredTasks = showInactive ? tasks : tasks.filter(t => t.isActive)
+  return NextResponse.json(filteredTasks)
 }
 
 export async function POST(req: NextRequest) {
@@ -34,6 +39,7 @@ export async function POST(req: NextRequest) {
       status: (body.status || 'TODO') as TaskStatus,
       description: (body.description || undefined),
       created_at: new Date().toISOString(),
+      isActive: true,
     }
     if (!item.title.trim() || !item.assignee.trim()) {
       return NextResponse.json({ error: 'Thiếu tiêu đề hoặc người phụ trách' }, { status: 400 })
@@ -61,6 +67,7 @@ export async function PUT(req: NextRequest) {
       priority: (body.priority ?? prev.priority) as TaskPriority,
       status: (body.status ?? prev.status) as TaskStatus,
       description: body.description ?? prev.description,
+      isActive: body.isActive ?? prev.isActive,
     }
     tasks[idx] = updated
     return NextResponse.json(updated)
@@ -75,7 +82,8 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
   const idx = tasks.findIndex(t => t.id === id)
   if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  tasks.splice(idx, 1)
+  // Soft delete: set isActive to false instead of removing from array
+  tasks[idx].isActive = false
   return NextResponse.json({ ok: true })
 }
 

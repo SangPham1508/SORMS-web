@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -17,16 +17,10 @@ type User = {
   roles: string[];
 };
 
-const mock: User[] = [
-  { id: 1, email: "admin@fpt.edu.vn", full_name: "System Admin", status: "ACTIVE", roles: ["admin"] },
-  { id: 2, email: "office01@fe.edu.vn", full_name: "Office User", status: "INACTIVE", roles: ["office"] },
-  { id: 3, email: "guest@example.com", full_name: "Khách", status: "ACTIVE", roles: ["guest"] },
-];
-
-export default function UsersPage() {
+function UsersInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<User[]>(mock);
+  const [rows, setRows] = useState<User[]>([]);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<"id" | "name" | "email">("id");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -47,40 +41,26 @@ export default function UsersPage() {
   const [message, setMessage] = useState<string | null>(null);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  // Demo/Live mode giống tasks
-  const [isDemoMode, setIsDemoMode] = useState(true)
-  const [loadingLive, setLoadingLive] = useState(false)
+  async function refetchUsers() {
+    try {
+      const res = await fetch('/api/system/users', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (Array.isArray(data?.items)) {
+        setRows(data.items)
+      } else if (Array.isArray(data)) {
+        setRows(data)
+      } else {
+        setRows([])
+      }
+    } catch {
+      setRows([])
+    }
+  }
 
   useEffect(() => {
-    if (isDemoMode) {
-      // Chỉ hiển thị mock nếu ở Demo mode
-      setRows(mock)
-      return
-    }
-    let aborted = false
-    const fetchLive = async () => {
-      setLoadingLive(true)
-      setRows([])
-      try {
-        const res = await fetch('/api/system/users', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
-        if (aborted) return
-        if (Array.isArray(data?.items)) {
-          setRows(data.items)
-        } else {
-          setRows([])
-        }
-      } catch (e) {
-        if (aborted) return
-        setRows([])
-      } finally {
-        if (!aborted) setLoadingLive(false)
-      }
-    }
-    fetchLive()
-    return () => { aborted = true }
-  }, [isDemoMode])
+    refetchUsers()
+  }, [])
 
   useEffect(() => {
     const q = searchParams.get("q") || "";
@@ -184,21 +164,6 @@ export default function UsersPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button 
-              onClick={() => setIsDemoMode(!isDemoMode)}
-              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline ml-1">
-                {isDemoMode ? 'Demo Mode' : 'Live Mode'}
-              </span>
-            </Button>
             <Button className="h-9 px-4 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm whitespace-nowrap" onClick={() => { setCreateForm({ full_name: "", email: "", phone_number: "", role: "" }); setCreateOpen(true); }}>
               Tạo người dùng
             </Button>
@@ -233,33 +198,7 @@ export default function UsersPage() {
           </div>
         )}
 
-        {/* Mode Indicator */}
-        <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
-          isDemoMode 
-            ? 'bg-orange-50 border-orange-200 text-orange-800' 
-            : 'bg-green-50 border-green-200 text-green-800'
-        }`}>
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-semibold">
-              {isDemoMode ? 'Chế độ Demo' : 'Chế độ Live'}
-            </span>
-            <span className="text-xs opacity-75">
-              {isDemoMode 
-                ? 'Đang sử dụng dữ liệu ảo để demo' 
-                : 'Đang kết nối với API thật'
-              }
-            </span>
-            {loadingLive && (
-              <div className="flex items-center gap-1 ml-auto">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                <span className="text-xs">Đang tải...</span>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Removed Demo/Live banner */}
 
         {/* Filters */}
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 rounded-lg">
@@ -495,13 +434,19 @@ export default function UsersPage() {
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEditOpen(false)}>Hủy</Button>
             <Button disabled={!editForm.id || !editForm.full_name.trim() || !emailRegex.test(editForm.email) || !editForm.role}
-              onClick={() => {
-              setRows((rs) => rs.map((u) => u.id === editForm.id
-                ? { ...u, full_name: editForm.full_name, email: editForm.email, phone_number: editForm.phone_number, roles: editForm.role ? [editForm.role] : [] }
-                : u
-              ));
-              setEditOpen(false);
-              setMessage('Đã cập nhật người dùng.');
+              onClick={async () => {
+              try {
+                // Tạm thời cập nhật local do API chưa có endpoint update cụ thể
+                setRows((rs) => rs.map((u) => u.id === editForm.id
+                  ? { ...u, full_name: editForm.full_name, email: editForm.email, phone_number: editForm.phone_number, roles: editForm.role ? [editForm.role] : [] }
+                  : u
+                ));
+                setEditOpen(false);
+                setMessage('Đã cập nhật người dùng.');
+                await refetchUsers()
+              } catch {
+                setMessage('Lỗi khi cập nhật người dùng.')
+              }
             }}>Lưu</Button>
           </div>
         }
@@ -564,14 +509,25 @@ export default function UsersPage() {
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>Hủy</Button>
             <Button disabled={!createForm.full_name.trim() || !emailRegex.test(createForm.email) || !createForm.role}
-              onClick={() => {
-              const nextId = rows.length ? Math.max(...rows.map(u => u.id)) + 1 : 1;
-              setRows((rs) => [
-                ...rs,
-                { id: nextId, full_name: createForm.full_name, email: createForm.email, phone_number: createForm.phone_number, roles: [createForm.role], status: 'ACTIVE' } as User,
-              ]);
-              setCreateOpen(false);
-              setMessage('Đã tạo người dùng mới.');
+              onClick={async () => {
+              try {
+                const resp = await fetch('/api/system/users?action=create', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    full_name: createForm.full_name,
+                    email: createForm.email,
+                    phone_number: createForm.phone_number,
+                    role: createForm.role
+                  })
+                })
+                if (!resp.ok) throw new Error('Tạo người dùng thất bại')
+                setCreateOpen(false);
+                setMessage('Đã tạo người dùng mới.');
+                await refetchUsers()
+              } catch (e) {
+                setMessage('Lỗi khi tạo người dùng mới.')
+              }
             }}>Tạo</Button>
           </div>
         }
@@ -618,11 +574,20 @@ export default function UsersPage() {
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setConfirmOpen({ open: false, type: 'delete' })}>Hủy</Button>
-            <Button onClick={() => {
+            <Button onClick={async () => {
               if (!confirmOpen.user) return;
-              setRows((rs) => rs.filter((u) => u.id !== confirmOpen.user!.id));
-              setMessage('Đã xóa người dùng.');
-              setConfirmOpen({ open: false, type: 'delete' });
+              try {
+                const resp = await fetch(`/api/system/users?id=${confirmOpen.user.id}` , { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+                if (!resp.ok) {
+                  const err = await resp.json().catch(() => ({}))
+                  throw new Error(err?.error || 'Xóa người dùng thất bại')
+                }
+                setMessage('Đã xóa người dùng.');
+                setConfirmOpen({ open: false, type: 'delete' });
+                await refetchUsers()
+              } catch (e) {
+                setMessage(e instanceof Error ? e.message : 'Lỗi khi xóa người dùng.')
+              }
             }}>Xác nhận</Button>
           </div>
         }
@@ -635,6 +600,14 @@ export default function UsersPage() {
       </div>
     </>
   );
+}
+
+export default function UsersPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-gray-600">Đang tải...</div>}>
+      <UsersInner />
+    </Suspense>
+  )
 }
 
 

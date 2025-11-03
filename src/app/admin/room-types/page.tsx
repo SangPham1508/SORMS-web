@@ -151,12 +151,23 @@ export default function RoomTypesPage() {
     const response = await fetch(`/api/system/room-types?id=${confirmOpen.id}`, { method: 'DELETE' })
     if (response.ok) {
       await refetchRoomTypes()
-      setFlash({ type: 'success', text: 'Đã xóa loại phòng.' })
+      setFlash({ type: 'success', text: 'Đã vô hiệu hóa loại phòng.' })
     } else {
       const errorData = await response.json()
-      setFlash({ type: 'error', text: errorData.error || 'Có lỗi xảy ra khi xóa.' })
+      setFlash({ type: 'error', text: errorData.error || 'Có lỗi xảy ra khi vô hiệu hóa.' })
     }
     setConfirmOpen({ open: false })
+  }
+
+  async function activateRoomType(id: number) {
+    try {
+      const resp = await fetch(`/api/system/room-types/${id}/activate`, { method: 'PUT' })
+      if (!resp.ok) throw new Error('Kích hoạt loại phòng thất bại')
+      setFlash({ type: 'success', text: 'Đã kích hoạt loại phòng thành công.' })
+      await refetchRoomTypes()
+    } catch (e) {
+      setFlash({ type: 'error', text: e instanceof Error ? e.message : 'Có lỗi xảy ra' })
+    }
   }
 
   return (
@@ -349,6 +360,7 @@ export default function RoomTypesPage() {
                           <th className="px-4 py-3 text-center font-semibold">Tên loại phòng</th>
                           <th className="px-4 py-3 text-center font-semibold">Giá cơ bản</th>
                           <th className="px-4 py-3 text-center font-semibold">Số người</th>
+                          <th className="px-4 py-3 text-center font-semibold">Trạng thái</th>
                           <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
                         </tr>
                       </thead>
@@ -368,6 +380,17 @@ export default function RoomTypesPage() {
                             </td>
                             <td className="px-4 py-3 text-center text-gray-700">{row.maxOccupancy}</td>
                             <td className="px-4 py-3 text-center">
+                              {row.isActive !== false ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  Hoạt động
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  Vô hiệu
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
                               <div className="flex gap-2 justify-center">
                                 <Button
                                   variant="secondary"
@@ -385,13 +408,22 @@ export default function RoomTypesPage() {
                                 >
                                   Sửa
                                 </Button>
-                                <Button
-                                  variant="danger"
-                                  className="h-8 px-3 text-xs"
-                                  onClick={() => confirmDelete(row.id)}
-                                >
-                                  Xóa
-                                </Button>
+                                {row.isActive !== false ? (
+                                  <Button
+                                    variant="danger"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => confirmDelete(row.id)}
+                                  >
+                                    Vô hiệu
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700"
+                                    onClick={() => activateRoomType(row.id)}
+                                  >
+                                    Kích hoạt
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -493,16 +525,28 @@ export default function RoomTypesPage() {
                                 Sửa
                               </Button>
 
-                              <Button
-                                variant="danger"
-                                className="h-10 text-xs font-medium px-2"
-                                onClick={() => confirmDelete(row.id)}
-                              >
-                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Xóa
-                              </Button>
+                              {row.isActive !== false ? (
+                                <Button
+                                  variant="danger"
+                                  className="h-10 text-xs font-medium px-2"
+                                  onClick={() => confirmDelete(row.id)}
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                  </svg>
+                                  Vô hiệu
+                                </Button>
+                              ) : (
+                                <Button
+                                  className="h-10 text-xs font-medium px-2 bg-green-600 hover:bg-green-700"
+                                  onClick={() => activateRoomType(row.id)}
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Kích hoạt
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -757,16 +801,18 @@ export default function RoomTypesPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal open={confirmOpen.open} onClose={() => setConfirmOpen({ open: false })} title="Xác nhận xóa">
+      <Modal open={confirmOpen.open} onClose={() => setConfirmOpen({ open: false })} title="Xác nhận vô hiệu hóa">
         <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Xác nhận xóa</h2>
-          <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa loại phòng này không?</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Xác nhận vô hiệu hóa</h2>
+          <p className="text-gray-600 mb-6">
+            Bạn có chắc muốn vô hiệu hóa loại phòng này? Loại phòng sẽ không bị xóa hoàn toàn và có thể được kích hoạt lại sau.
+          </p>
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setConfirmOpen({ open: false })}>
               Hủy
             </Button>
             <Button variant="danger" onClick={doDelete}>
-              Xóa
+              Vô hiệu hóa
             </Button>
           </div>
         </div>

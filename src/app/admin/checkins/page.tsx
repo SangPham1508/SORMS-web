@@ -21,29 +21,10 @@ type Checkin = {
   status: CheckinStatus
 }
 
-// Mock data cho checkins
-const mockCheckins: Checkin[] = [
-  { id: 1, booking_code: 'BK-0001', user_name: 'Nguyễn Văn An', room_code: 'A101', checkin_at: '2024-01-15T14:30:00', checkout_at: '2024-01-17T11:00:00', status: 'CHECKED_OUT', face_ref: 'face_001.jpg' },
-  { id: 2, booking_code: 'BK-0002', user_name: 'Trần Thị Bình', room_code: 'A102', checkin_at: '2024-01-16T16:45:00', status: 'CHECKED_IN', face_ref: 'face_002.jpg' },
-  { id: 3, booking_code: 'BK-0003', user_name: 'Lê Minh Cường', room_code: 'A201', checkin_at: '2024-01-17T10:15:00', checkout_at: '2024-01-19T12:30:00', status: 'CHECKED_OUT', face_ref: 'face_003.jpg' },
-  { id: 4, booking_code: 'BK-0004', user_name: 'Phạm Thị Dung', room_code: 'A202', checkin_at: '2024-01-18T15:20:00', status: 'CHECKED_IN', face_ref: 'face_004.jpg' },
-  { id: 5, booking_code: 'BK-0005', user_name: 'Hoàng Văn Em', room_code: 'A301', checkin_at: '2024-01-19T09:30:00', checkout_at: '2024-01-21T10:00:00', status: 'CHECKED_OUT', face_ref: 'face_005.jpg' },
-  { id: 6, booking_code: 'BK-0006', user_name: 'Vũ Thị Phương', room_code: 'A302', checkin_at: '2024-01-20T13:45:00', status: 'CHECKED_IN', face_ref: 'face_006.jpg' },
-  { id: 7, booking_code: 'BK-0007', user_name: 'Đặng Văn Giang', room_code: 'B101', checkin_at: '2024-01-21T11:00:00', checkout_at: '2024-01-23T09:30:00', status: 'CHECKED_OUT', face_ref: 'face_007.jpg' },
-  { id: 8, booking_code: 'BK-0008', user_name: 'Bùi Thị Hoa', room_code: 'B102', checkin_at: '2024-01-22T14:15:00', status: 'CHECKED_IN', face_ref: 'face_008.jpg' },
-  { id: 9, booking_code: 'BK-0009', user_name: 'Ngô Văn Ích', room_code: 'B201', checkin_at: '2024-01-23T08:30:00', checkout_at: '2024-01-25T11:45:00', status: 'CHECKED_OUT', face_ref: 'face_009.jpg' },
-  { id: 10, booking_code: 'BK-0010', user_name: 'Đinh Thị Kim', room_code: 'B202', checkin_at: '2024-01-24T16:00:00', status: 'CHECKED_IN', face_ref: 'face_010.jpg' },
-  { id: 11, booking_code: 'BK-0011', user_name: 'Lý Văn Long', room_code: 'C101', checkin_at: '2024-01-25T12:30:00', checkout_at: '2024-01-27T10:15:00', status: 'CHECKED_OUT', face_ref: 'face_011.jpg' },
-  { id: 12, booking_code: 'BK-0012', user_name: 'Võ Thị Mai', room_code: 'C102', checkin_at: '2024-01-26T15:45:00', status: 'CHECKED_IN', face_ref: 'face_012.jpg' },
-  { id: 13, booking_code: 'BK-0013', user_name: 'Phan Văn Nam', room_code: 'C201', checkin_at: '2024-01-27T09:15:00', status: 'PENDING', face_ref: 'face_013.jpg' },
-  { id: 14, booking_code: 'BK-0014', user_name: 'Trương Thị Oanh', room_code: 'C202', checkin_at: '2024-01-28T13:20:00', status: 'PENDING', face_ref: 'face_014.jpg' },
-  { id: 15, booking_code: 'BK-0015', user_name: 'Hồ Văn Phúc', room_code: 'D101', checkin_at: '2024-01-29T11:30:00', status: 'PENDING', face_ref: 'face_015.jpg' }
-]
+// Removed mock data; always use API
 
 export default function CheckinsPage() {
   const [rows, setRows] = useState<Checkin[]>([])
-  const [isDemoMode, setIsDemoMode] = useState(false)
-  const [isModeSwitching, setIsModeSwitching] = useState(false)
   const { data: checkinsData, loading: checkinsLoading, error: checkinsError, refetch: refetchCheckins } = useCheckins()
   const [flash, setFlash] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
@@ -66,50 +47,21 @@ export default function CheckinsPage() {
 
   useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 3000); return () => clearTimeout(t) }, [flash])
 
-  // Debounced mode toggle để tránh spam click
-  const [toggleTimeout, setToggleTimeout] = useState<NodeJS.Timeout | null>(null)
-  
-  const handleModeToggle = () => {
-    if (isModeSwitching) return // Prevent spam click during transition
-    
-    if (toggleTimeout) {
-      clearTimeout(toggleTimeout)
-    }
-    
-    const timeout = setTimeout(() => {
-      setIsDemoMode(!isDemoMode)
-      setToggleTimeout(null)
-    }, 100) // 100ms debounce
-    
-    setToggleTimeout(timeout)
-  }
-
-  // Sync data dựa trên mode
+  // Sync data from API
   useEffect(() => {
-    setIsModeSwitching(true)
-    
-    if (isDemoMode) {
-      // Demo mode: sử dụng mock data
-      setRows(mockCheckins)
-    } else {
-      // Live mode: chỉ sử dụng API data, KHÔNG BAO GIỜ sử dụng mock data
-      // Clear data ngay lập tức khi chuyển sang Live mode
-      if (checkinsLoading) {
-        // Khi đang loading, clear data để không hiển thị mock data
-        setRows([])
-      } else if (checkinsError) {
-        // Khi API lỗi, clear data để không hiển thị mock data
-        setRows([])
-      } else if (checkinsData && Array.isArray(checkinsData)) {
-        // Chỉ set data khi có API data hợp lệ
-        setRows(checkinsData as Checkin[])
-      } else {
-        // Không có API data, hiển thị empty
-        setRows([])
-      }
+    if (checkinsLoading) {
+      return
     }
-    setIsModeSwitching(false)
-  }, [isDemoMode, checkinsData, checkinsLoading, checkinsError])
+    if (checkinsError) {
+      setRows([])
+      return
+    }
+    if (checkinsData && Array.isArray(checkinsData)) {
+      setRows(checkinsData as Checkin[])
+    } else {
+      setRows([])
+    }
+  }, [checkinsData, checkinsLoading, checkinsError])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -158,41 +110,27 @@ export default function CheckinsPage() {
       status: edit.status,
     }
 
-    if (isDemoMode) {
-      // Demo mode: cập nhật local state
+    try {
       if (edit.id) {
-        setRows(rs => rs.map(r => r.id === edit.id ? payload : r))
-        setFlash({ type: 'success', text: 'Đã cập nhật check-in (Demo).' })
-      } else {
-        setRows(rs => [...rs, payload])
-        setFlash({ type: 'success', text: 'Đã tạo check-in mới (Demo).' })
-      }
-    } else {
-      // Live mode: gọi API
-      try {
-        if (edit.id) {
-          const response = await apiClient.updateCheckin(edit.id, payload)
-          if (response.success) {
-            await refetchCheckins()
-            setFlash({ type: 'success', text: 'Đã cập nhật check-in.' })
-          } else {
-            setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi cập nhật.' })
-            return
-          }
-        } else {
-          const response = await apiClient.createCheckin(payload)
-          if (response.success) {
-            await refetchCheckins()
-            setFlash({ type: 'success', text: 'Đã tạo check-in mới.' })
-          } else {
-            setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi tạo mới.' })
-            return
-          }
+        const response = await apiClient.updateCheckin(edit.id, payload)
+        if (!response.success) {
+          setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi cập nhật.' })
+          return
         }
-      } catch (error) {
-        setFlash({ type: 'error', text: 'Có lỗi xảy ra khi lưu check-in. Vui lòng thử lại.' })
-        return
+        await refetchCheckins()
+        setFlash({ type: 'success', text: 'Đã cập nhật check-in.' })
+      } else {
+        const response = await apiClient.createCheckin(payload)
+        if (!response.success) {
+          setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi tạo mới.' })
+          return
+        }
+        await refetchCheckins()
+        setFlash({ type: 'success', text: 'Đã tạo check-in mới.' })
       }
+    } catch (error) {
+      setFlash({ type: 'error', text: 'Có lỗi xảy ra khi lưu check-in. Vui lòng thử lại.' })
+      return
     }
     
     setEditOpen(false)
@@ -202,25 +140,17 @@ export default function CheckinsPage() {
   async function doDelete() {
     if (!confirmOpen.id) return
     
-    if (isDemoMode) {
-      // Demo mode: xóa khỏi local state
-      setRows(rs => rs.filter(r => r.id !== confirmOpen.id))
-      setFlash({ type: 'success', text: 'Đã xóa check-in (Demo).' })
-    } else {
-      // Live mode: gọi API
-      try {
-        const response = await apiClient.deleteCheckin(confirmOpen.id)
-        if (response.success) {
-          await refetchCheckins()
-          setFlash({ type: 'success', text: 'Đã xóa check-in.' })
-        } else {
-          setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi xóa.' })
-          return
-        }
-      } catch (error) {
-        setFlash({ type: 'error', text: 'Có lỗi xảy ra khi xóa check-in. Vui lòng thử lại.' })
+    try {
+      const response = await apiClient.deleteCheckin(confirmOpen.id)
+      if (!response.success) {
+        setFlash({ type: 'error', text: response.error || 'Có lỗi xảy ra khi xóa.' })
         return
       }
+      await refetchCheckins()
+      setFlash({ type: 'success', text: 'Đã xóa check-in.' })
+    } catch (error) {
+      setFlash({ type: 'error', text: 'Có lỗi xảy ra khi xóa check-in. Vui lòng thử lại.' })
+      return
     }
     
     setConfirmOpen({ open: false })
@@ -296,30 +226,6 @@ export default function CheckinsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Demo Mode Toggle */}
-            <Button 
-              onClick={handleModeToggle}
-              disabled={isModeSwitching}
-              className={`px-3 py-2 text-sm flex-shrink-0 transition-all duration-300 ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              } ${isModeSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {isModeSwitching ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-              ) : (
-                <svg className="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              )}
-              <span className="hidden sm:inline">
-                {isModeSwitching ? 'Đang chuyển...' : (isDemoMode ? 'Demo Mode' : 'Live Mode')}
-              </span>
-              <span className="sm:hidden">
-                {isModeSwitching ? '...' : (isDemoMode ? 'Demo' : 'Live')}
-              </span>
-            </Button>
             <Button 
               onClick={openCreate} 
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm flex-shrink-0"
@@ -343,52 +249,12 @@ export default function CheckinsPage() {
           </div>
         )}
 
-        {/* Mode Indicator */}
-        <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
-          isDemoMode 
-            ? 'bg-orange-50 border-orange-200 text-orange-800' 
-            : 'bg-green-50 border-green-200 text-green-800'
-        }`}>
-          <div className="flex items-center gap-2">
-            {isModeSwitching ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            )}
-            <span className="font-medium">
-              {isModeSwitching ? 'Đang chuyển đổi...' : (isDemoMode ? 'Chế độ Demo' : 'Chế độ Live')}
-            </span>
-            {!isDemoMode && !isModeSwitching && (
-              <div className="flex items-center gap-1 ml-2">
-                {checkinsLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
-                    <span className="text-xs">Đang tải dữ liệu...</span>
-                  </>
-                ) : checkinsError ? (
-                  <>
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-xs text-red-600">
-                      {checkinsError.includes('Hệ thống đang gặp sự cố') ? 'Hệ thống lỗi' : 'API lỗi - giữ data cũ'}
-                    </span>
-                  </>
-                ) : checkinsData && Array.isArray(checkinsData) ? (
-                  <>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-green-600">{checkinsData.length} records</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600">Không có data</span>
-                  </>
-                )}
-              </div>
-            )}
+        {/* Loading indicator */}
+        {checkinsLoading && (
+          <div className="rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm bg-yellow-50 border-yellow-200 text-yellow-800">
+            Đang tải dữ liệu check-in...
           </div>
-        </div>
+        )}
 
         {/* Filters */}
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
@@ -541,9 +407,7 @@ export default function CheckinsPage() {
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span className="text-sm">
-                        {isDemoMode ? 'Không có dữ liệu demo' : 'Không có dữ liệu từ API'}
-                      </span>
+                      <span className="text-sm">Không có dữ liệu</span>
                     </div>
                   </td>
                 </tr>
@@ -620,15 +484,8 @@ export default function CheckinsPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                            {isDemoMode ? 'Không có dữ liệu demo' : 'Không có dữ liệu từ API'}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {isDemoMode 
-                              ? 'Chuyển sang chế độ Live để xem dữ liệu thực từ API' 
-                              : 'Kiểm tra kết nối API hoặc thử lại sau'
-                            }
-                          </p>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">Không có dữ liệu</h3>
+                            <p className="text-sm text-gray-500">Kiểm tra kết nối API hoặc thử lại sau</p>
                         </div>
                       </div>
                     </div>

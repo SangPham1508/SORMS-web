@@ -12,205 +12,9 @@ import { useBookings, useRooms } from '@/hooks/useApi'
 
 const statusOptions: BookingStatus[] = ['PENDING','APPROVED','REJECTED','CANCELLED','CHECKED_IN','CHECKED_OUT']
 
-// Dữ liệu ảo cho phòng
-const mockRooms = [
-  { id: 1, code: 'A101', name: 'Phòng Deluxe', roomTypeId: 1, floor: 1, status: 'AVAILABLE' as const, description: 'Phòng cao cấp với view biển' },
-  { id: 2, code: 'A102', name: 'Phòng Standard', roomTypeId: 2, floor: 1, status: 'OCCUPIED' as const, description: 'Phòng tiêu chuẩn' },
-  { id: 3, code: 'A201', name: 'Phòng Suite', roomTypeId: 3, floor: 2, status: 'AVAILABLE' as const, description: 'Phòng suite sang trọng' },
-  { id: 4, code: 'A202', name: 'Phòng Family', roomTypeId: 4, floor: 2, status: 'CLEANING' as const, description: 'Phòng gia đình' },
-  { id: 5, code: 'A301', name: 'Phòng Executive', roomTypeId: 5, floor: 3, status: 'AVAILABLE' as const, description: 'Phòng executive' },
-  { id: 6, code: 'A302', name: 'Phòng Presidential', roomTypeId: 6, floor: 3, status: 'MAINTENANCE' as const, description: 'Phòng tổng thống' },
-  { id: 7, code: 'B101', name: 'Phòng Ocean View', roomTypeId: 1, floor: 1, status: 'AVAILABLE' as const, description: 'Phòng view biển' },
-  { id: 8, code: 'B102', name: 'Phòng Garden View', roomTypeId: 2, floor: 1, status: 'AVAILABLE' as const, description: 'Phòng view vườn' },
-]
-
-// Dữ liệu ảo cho đặt phòng
-const mockBookings: Booking[] = [
-  {
-    id: 1,
-    code: 'BK001',
-    userId: 1,
-    userName: 'Nguyễn Văn An',
-    roomId: 1,
-    roomCode: 'A101',
-    checkinDate: '2024-01-15',
-    checkoutDate: '2024-01-18',
-    numGuests: 2,
-    note: 'Khách VIP, yêu cầu phòng tầng cao',
-    status: 'PENDING',
-    created_at: '2024-01-10T10:00:00Z',
-    updated_at: '2024-01-10T10:00:00Z'
-  },
-  {
-    id: 2,
-    code: 'BK002',
-    userId: 2,
-    userName: 'Trần Thị Bình',
-    roomId: 3,
-    roomCode: 'A201',
-    checkinDate: '2024-01-12',
-    checkoutDate: '2024-01-15',
-    numGuests: 1,
-    note: 'Khách đi công tác',
-    status: 'APPROVED',
-    created_at: '2024-01-08T14:30:00Z',
-    updated_at: '2024-01-09T09:15:00Z'
-  },
-  {
-    id: 3,
-    code: 'BK003',
-    userId: 3,
-    userName: 'Lê Minh Cường',
-    roomId: 2,
-    roomCode: 'A102',
-    checkinDate: '2024-01-20',
-    checkoutDate: '2024-01-25',
-    numGuests: 4,
-    note: 'Gia đình có trẻ em',
-    status: 'CHECKED_IN',
-    created_at: '2024-01-05T16:45:00Z',
-    updated_at: '2024-01-20T08:00:00Z'
-  },
-  {
-    id: 4,
-    code: 'BK004',
-    userId: 4,
-    userName: 'Phạm Thị Dung',
-    roomId: 5,
-    roomCode: 'A301',
-    checkinDate: '2024-01-18',
-    checkoutDate: '2024-01-20',
-    numGuests: 2,
-    note: 'Kỷ niệm ngày cưới',
-    status: 'CHECKED_OUT',
-    created_at: '2024-01-12T11:20:00Z',
-    updated_at: '2024-01-20T12:00:00Z'
-  },
-  {
-    id: 5,
-    code: 'BK005',
-    userId: 5,
-    userName: 'Hoàng Văn Em',
-    roomId: 7,
-    roomCode: 'B101',
-    checkinDate: '2024-01-25',
-    checkoutDate: '2024-01-28',
-    numGuests: 3,
-    note: 'Du lịch gia đình',
-    status: 'REJECTED',
-    created_at: '2024-01-15T13:10:00Z',
-    updated_at: '2024-01-16T10:30:00Z'
-  },
-  {
-    id: 6,
-    code: 'BK006',
-    userId: 6,
-    userName: 'Vũ Thị Phương',
-    roomId: 4,
-    roomCode: 'A202',
-    checkinDate: '2024-01-22',
-    checkoutDate: '2024-01-24',
-    numGuests: 2,
-    note: 'Hội nghị công ty',
-    status: 'CANCELLED',
-    created_at: '2024-01-18T09:30:00Z',
-    updated_at: '2024-01-19T14:45:00Z'
-  },
-  {
-    id: 7,
-    code: 'BK007',
-    userId: 7,
-    userName: 'Đặng Minh Giang',
-    roomId: 8,
-    roomCode: 'B102',
-    checkinDate: '2024-01-28',
-    checkoutDate: '2024-02-02',
-    numGuests: 1,
-    note: 'Khách thường xuyên',
-    status: 'PENDING',
-    created_at: '2024-01-20T15:20:00Z',
-    updated_at: '2024-01-20T15:20:00Z'
-  },
-  {
-    id: 8,
-    code: 'BK008',
-    userId: 8,
-    userName: 'Bùi Thị Hoa',
-    roomId: 1,
-    roomCode: 'A101',
-    checkinDate: '2024-02-01',
-    checkoutDate: '2024-02-05',
-    numGuests: 2,
-    note: 'Honeymoon',
-    status: 'APPROVED',
-    created_at: '2024-01-22T12:00:00Z',
-    updated_at: '2024-01-23T08:30:00Z'
-  },
-  {
-    id: 9,
-    code: 'BK009',
-    userId: 9,
-    userName: 'Ngô Văn Inh',
-    roomId: 3,
-    roomCode: 'A201',
-    checkinDate: '2024-01-30',
-    checkoutDate: '2024-02-03',
-    numGuests: 4,
-    note: 'Tết Nguyên Đán',
-    status: 'CHECKED_IN',
-    created_at: '2024-01-25T10:15:00Z',
-    updated_at: '2024-01-30T07:00:00Z'
-  },
-  {
-    id: 10,
-    code: 'BK010',
-    userId: 10,
-    userName: 'Lý Thị Kim',
-    roomId: 5,
-    roomCode: 'A301',
-    checkinDate: '2024-02-05',
-    checkoutDate: '2024-02-08',
-    numGuests: 1,
-    note: 'Công tác ngắn hạn',
-    status: 'PENDING',
-    created_at: '2024-01-28T14:45:00Z',
-    updated_at: '2024-01-28T14:45:00Z'
-  },
-  {
-    id: 11,
-    code: 'BK011',
-    userId: 11,
-    userName: 'Tôn Văn Long',
-    roomId: 7,
-    roomCode: 'B101',
-    checkinDate: '2024-02-10',
-    checkoutDate: '2024-02-15',
-    numGuests: 3,
-    note: 'Du lịch nhóm bạn',
-    status: 'APPROVED',
-    created_at: '2024-01-30T16:30:00Z',
-    updated_at: '2024-01-31T09:20:00Z'
-  },
-  {
-    id: 12,
-    code: 'BK012',
-    userId: 12,
-    userName: 'Đinh Thị Mai',
-    roomId: 2,
-    roomCode: 'A102',
-    checkinDate: '2024-02-12',
-    checkoutDate: '2024-02-14',
-    numGuests: 2,
-    note: 'Valentine',
-    status: 'PENDING',
-    created_at: '2024-02-01T11:10:00Z',
-    updated_at: '2024-02-01T11:10:00Z'
-  }
-]
+// Removed mock data; always use API
 
 export default function BookingsPage() {
-  // State quản lý chế độ demo/production
-  const [isDemoMode, setIsDemoMode] = useState(true)
   const [rows, setRows] = useState<Booking[]>([])
   const [rooms, setRooms] = useState<any[]>([])
   const [flash, setFlash] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -256,30 +60,19 @@ export default function BookingsPage() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [editOpen, edit])
 
-  // Sync dữ liệu với fallback logic
+  // Sync dữ liệu từ API
   useEffect(() => {
-    if (isDemoMode) {
-      // Chế độ demo: sử dụng dữ liệu ảo
-      setRows(mockBookings)
-      setRooms(mockRooms)
-    } else {
-      // Chế độ production: sử dụng API với fallback
-      if (bookingsData) {
-        setRows(bookingsData as Booking[])
-      } else if (bookingsError) {
-        // Fallback về dữ liệu ảo nếu API lỗi
-        setRows(mockBookings)
-        setFlash({ type: 'error', text: 'Không thể kết nối API, đang sử dụng dữ liệu demo' })
-      }
-      
-      if (roomsData) {
-        setRooms(roomsData as any[])
-      } else if (roomsError) {
-        // Fallback về dữ liệu ảo nếu API lỗi
-        setRooms(mockRooms)
-      }
+    if (bookingsData && Array.isArray(bookingsData)) {
+      setRows(bookingsData as Booking[])
+    } else if (bookingsError) {
+      setRows([])
     }
-  }, [isDemoMode, bookingsData, roomsData, bookingsError, roomsError])
+    if (roomsData && Array.isArray(roomsData)) {
+      setRooms(roomsData as any[])
+    } else if (roomsError) {
+      setRooms([])
+    }
+  }, [bookingsData, roomsData, bookingsError, roomsError])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -354,36 +147,7 @@ export default function BookingsPage() {
       return
     }
     
-    if (isDemoMode) {
-      // Chế độ demo: cập nhật dữ liệu ảo
-      const newBooking: Booking = {
-        id: edit.id || Math.max(...rows.map(r => r.id)) + 1,
-        code: edit.code.trim(),
-        userId: 1, // Default user ID for demo
-        userName: `User 1`,
-        roomId: edit.roomId,
-        roomCode: rooms.find(r => r.id === edit.roomId)?.code || `Room ${edit.roomId}`,
-        checkinDate: edit.checkinDate,
-        checkoutDate: edit.checkoutDate,
-        numGuests: edit.numGuests,
-        status: edit.status,
-        note: edit.note.trim() || '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-      
-      if (edit.id) {
-        setRows(prev => prev.map(r => r.id === edit.id ? newBooking : r))
-        setFlash({ type: 'success', text: 'Đã cập nhật đặt phòng (Demo Mode).' })
-      } else {
-        setRows(prev => [...prev, newBooking])
-        setFlash({ type: 'success', text: 'Đã tạo đặt phòng mới (Demo Mode).' })
-      }
-      setEditOpen(false)
-      return
-    }
-    
-    // Chế độ production: gọi API
+    // Gọi API
     const payload = {
       code: edit.code.trim(),
       userId: 1, // Default user ID for production
@@ -435,32 +199,36 @@ export default function BookingsPage() {
     if (!confirmOpen.id || !confirmOpen.type) return
     const { id, type } = confirmOpen
     
-    if (isDemoMode) {
-      // Chế độ demo: cập nhật dữ liệu ảo
-      if (type === 'delete') {
-        setRows(prev => prev.filter(r => r.id !== id))
-        setFlash({ type: 'success', text: 'Đã xóa đặt phòng (Demo Mode).' })
-      }
-      setConfirmOpen({ open: false })
-      return
-    }
-    
-    // Chế độ production: gọi API
+    // Gọi API
     try {
       if (type === 'delete') {
         const response = await fetch(`/api/system/bookings?id=${id}`, { method: 'DELETE' })
         if (!response.ok) {
           const error = await response.json()
-          throw new Error(error.error || 'Failed to delete booking')
+          throw new Error(error.error || 'Failed to deactivate booking')
         }
         await refetchBookings()
-        setFlash({ type: 'success', text: 'Đã xóa đặt phòng.' })
+        setFlash({ type: 'success', text: 'Đã vô hiệu hóa đặt phòng.' })
       }
     } catch (error: any) {
       setFlash({ type: 'error', text: error.message || 'Có lỗi xảy ra' })
     }
     
     setConfirmOpen({ open: false })
+  }
+
+  async function activateBooking(id: number) {
+    try {
+      const response = await fetch(`/api/system/bookings/${id}/activate`, { method: 'PUT' })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to activate booking')
+      }
+      await refetchBookings()
+      setFlash({ type: 'success', text: 'Đã kích hoạt đặt phòng.' })
+    } catch (error: any) {
+      setFlash({ type: 'error', text: error.message || 'Có lỗi xảy ra' })
+    }
   }
 
   function renderStatusChip(s: BookingStatus) {
@@ -494,22 +262,7 @@ export default function BookingsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Toggle Demo Mode - Mobile Optimized */}
-            <Button 
-              onClick={() => setIsDemoMode(!isDemoMode)}
-              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline ml-1">
-                {isDemoMode ? 'Demo Mode' : 'Live Mode'}
-              </span>
-            </Button>
+            
             
             <Button 
               onClick={openCreate} 
@@ -538,33 +291,12 @@ export default function BookingsPage() {
             </div>
           )}
 
-          {/* Mode Indicator */}
-          <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
-            isDemoMode 
-              ? 'bg-orange-50 border-orange-200 text-orange-800' 
-              : 'bg-green-50 border-green-200 text-green-800'
-          }`}>
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-semibold">
-                {isDemoMode ? 'Chế độ Demo' : 'Chế độ Live'}
-              </span>
-              <span className="text-xs opacity-75">
-                {isDemoMode 
-                  ? 'Đang sử dụng dữ liệu ảo để demo' 
-                  : 'Đang kết nối với API thật'
-                }
-              </span>
-              {(bookingsLoading || roomsLoading) && (
-                <div className="flex items-center gap-1 ml-auto">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                  <span className="text-xs">Đang tải...</span>
-                </div>
-              )}
+          {/* Loading indicator */}
+          {(bookingsLoading || roomsLoading) && (
+            <div className="rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm bg-yellow-50 border-yellow-200 text-yellow-800">
+              Đang tải dữ liệu đặt phòng...
             </div>
-          </div>
+          )}
 
           {/* Filters */}
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
@@ -777,6 +509,7 @@ export default function BookingsPage() {
                           <th className="px-4 py-3 text-center font-semibold">Check-out</th>
                           <th className="px-4 py-3 text-center font-semibold">Số khách</th>
                           <th className="px-4 py-3 text-center font-semibold">Trạng thái</th>
+                          <th className="px-4 py-3 text-center font-semibold">Kích hoạt</th>
                           <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
                     </tr>
                   </thead>
@@ -790,6 +523,17 @@ export default function BookingsPage() {
                             <td className="px-4 py-3 text-center text-gray-700">{row.checkoutDate}</td>
                             <td className="px-4 py-3 text-center text-gray-700">{row.numGuests}</td>
                             <td className="px-4 py-3 text-center">{renderStatusChip(row.status)}</td>
+                            <td className="px-4 py-3 text-center">
+                              {row.isActive !== false ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  Hoạt động
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  Vô hiệu
+                                </span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-center">
                               <div className="flex gap-2 justify-center">
                                 <Button
@@ -808,13 +552,22 @@ export default function BookingsPage() {
                                 >
                                   Sửa
                                 </Button>
-                                <Button
-                                  variant="danger"
-                                  className="h-8 px-3 text-xs"
-                                  onClick={() => confirmAction(row.id, 'delete')}
-                                >
-                                  Xóa
-                                </Button>
+                                {row.isActive !== false ? (
+                                  <Button
+                                    variant="danger"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => confirmAction(row.id, 'delete')}
+                                  >
+                                    Vô hiệu
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700"
+                                    onClick={() => activateBooking(row.id)}
+                                  >
+                                    Kích hoạt
+                                  </Button>
+                                )}
                               </div>
                             </td>
                       </tr>
@@ -925,16 +678,28 @@ export default function BookingsPage() {
                                 Sửa
                               </Button>
 
-                              <Button
-                                variant="danger"
-                                className="h-10 text-xs font-medium px-2"
-                                onClick={() => confirmAction(row.id, 'delete')}
-                              >
-                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Xóa
-                              </Button>
+                              {row.isActive !== false ? (
+                                <Button
+                                  variant="danger"
+                                  className="h-10 text-xs font-medium px-2"
+                                  onClick={() => confirmAction(row.id, 'delete')}
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                  </svg>
+                                  Vô hiệu
+                                </Button>
+                              ) : (
+                                <Button
+                                  className="h-10 text-xs font-medium px-2 bg-green-600 hover:bg-green-700"
+                                  onClick={() => activateBooking(row.id)}
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Kích hoạt
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1307,11 +1072,11 @@ export default function BookingsPage() {
       </Modal>
 
       {/* Confirmation Modal */}
-      <Modal open={confirmOpen.open} onClose={() => setConfirmOpen({ open: false })} title="Xác nhận xóa">
+      <Modal open={confirmOpen.open} onClose={() => setConfirmOpen({ open: false })} title="Xác nhận vô hiệu hóa">
         <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Xác nhận xóa</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Xác nhận vô hiệu hóa</h2>
           <p className="text-gray-600 mb-6">
-            Bạn có chắc chắn muốn xóa đặt phòng này không? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn vô hiệu hóa đặt phòng này không? Hành động này không thể hoàn tác, nhưng bạn có thể kích hoạt lại sau.
           </p>
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setConfirmOpen({ open: false })}>
@@ -1321,7 +1086,7 @@ export default function BookingsPage() {
               variant="danger" 
               onClick={doAction}
             >
-              Xóa
+              Vô hiệu hóa
             </Button>
           </div>
         </div>

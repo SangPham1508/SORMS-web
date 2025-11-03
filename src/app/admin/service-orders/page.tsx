@@ -32,148 +32,11 @@ type ServiceOrderItem = {
   unit_price: number
 }
 
-// Mock data cho service orders
-const mockServiceOrders: DemoServiceOrder[] = [
-  {
-    id: 1,
-    code: 'SO-0001',
-    customer_name: 'Nguyễn Văn An',
-    room_code: 'A101',
-    created_at: '2024-01-15T10:30:00',
-    total_amount: 150000,
-    status: 'COMPLETED',
-    note: 'Dịch vụ massage cho khách VIP',
-    items: [
-      { id: 1, service_name: 'Massage thư giãn', quantity: 1, unit_price: 150000 }
-    ]
-  },
-  {
-    id: 2,
-    code: 'SO-0002',
-    customer_name: 'Trần Thị Bình',
-    room_code: 'A102',
-    created_at: '2024-01-16T14:15:00',
-    total_amount: 200000,
-    status: 'IN_PROGRESS',
-    note: 'Dịch vụ spa và massage',
-    items: [
-      { id: 1, service_name: 'Spa mặt', quantity: 1, unit_price: 100000 },
-      { id: 2, service_name: 'Massage chân', quantity: 1, unit_price: 100000 }
-    ]
-  },
-  {
-    id: 3,
-    code: 'SO-0003',
-    customer_name: 'Lê Minh Cường',
-    room_code: 'A201',
-    created_at: '2024-01-17T09:45:00',
-    total_amount: 300000,
-    status: 'PENDING',
-    note: 'Đặt dịch vụ buffet sáng',
-    items: [
-      { id: 1, service_name: 'Buffet sáng', quantity: 2, unit_price: 150000 }
-    ]
-  },
-  {
-    id: 4,
-    code: 'SO-0004',
-    customer_name: 'Phạm Thị Dung',
-    room_code: 'A202',
-    created_at: '2024-01-18T16:20:00',
-    total_amount: 500000,
-    status: 'COMPLETED',
-    note: 'Dịch vụ đầy đủ cho khách đoàn',
-    items: [
-      { id: 1, service_name: 'Dọn phòng', quantity: 1, unit_price: 100000 },
-      { id: 2, service_name: 'Giặt ủi', quantity: 5, unit_price: 20000 },
-      { id: 3, service_name: 'Dịch vụ phòng', quantity: 1, unit_price: 300000 }
-    ]
-  },
-  {
-    id: 5,
-    code: 'SO-0005',
-    customer_name: 'Hoàng Văn Em',
-    room_code: 'A301',
-    created_at: '2024-01-19T11:30:00',
-    total_amount: 0,
-    status: 'CANCELLED',
-    note: 'Hủy dịch vụ do khách không đến',
-    items: []
-  },
-  {
-    id: 6,
-    code: 'SO-0006',
-    customer_name: 'Vũ Thị Phương',
-    room_code: 'A302',
-    created_at: '2024-01-20T13:45:00',
-    total_amount: 250000,
-    status: 'IN_PROGRESS',
-    note: 'Dịch vụ vận chuyển và đón khách',
-    items: [
-      { id: 1, service_name: 'Đón khách sân bay', quantity: 1, unit_price: 150000 },
-      { id: 2, service_name: 'Vận chuyển hành lý', quantity: 1, unit_price: 100000 }
-    ]
-  },
-  {
-    id: 7,
-    code: 'SO-0007',
-    customer_name: 'Đặng Văn Giang',
-    room_code: 'B101',
-    created_at: '2024-01-21T08:15:00',
-    total_amount: 400000,
-    status: 'COMPLETED',
-    note: 'Dịch vụ hội nghị và tiệc',
-    items: [
-      { id: 1, service_name: 'Thuê phòng hội nghị', quantity: 1, unit_price: 200000 },
-      { id: 2, service_name: 'Dịch vụ tiệc', quantity: 1, unit_price: 200000 }
-    ]
-  },
-  {
-    id: 8,
-    code: 'SO-0008',
-    customer_name: 'Bùi Thị Hoa',
-    room_code: 'B102',
-    created_at: '2024-01-22T15:30:00',
-    total_amount: 180000,
-    status: 'PENDING',
-    note: 'Dịch vụ spa cho khách nữ',
-    items: [
-      { id: 1, service_name: 'Spa toàn thân', quantity: 1, unit_price: 180000 }
-    ]
-  },
-  {
-    id: 9,
-    code: 'SO-0009',
-    customer_name: 'Ngô Văn Ích',
-    room_code: 'B201',
-    created_at: '2024-01-23T12:00:00',
-    total_amount: 350000,
-    status: 'IN_PROGRESS',
-    note: 'Dịch vụ golf và thể thao',
-    items: [
-      { id: 1, service_name: 'Thuê sân golf', quantity: 1, unit_price: 200000 },
-      { id: 2, service_name: 'Thuê dụng cụ golf', quantity: 1, unit_price: 150000 }
-    ]
-  },
-  {
-    id: 10,
-    code: 'SO-0010',
-    customer_name: 'Đinh Thị Kim',
-    room_code: 'B202',
-    created_at: '2024-01-24T17:45:00',
-    total_amount: 120000,
-    status: 'COMPLETED',
-    note: 'Dịch vụ massage cho khách',
-    items: [
-      { id: 1, service_name: 'Massage chân', quantity: 1, unit_price: 120000 }
-    ]
-  }
-]
+// Removed mock data; use API
 
 export default function ServiceOrdersPage() {
   const [rows, setRows] = useState<DemoServiceOrder[]>([])
-  const [isDemoMode, setIsDemoMode] = useState(false)
-  const [isModeSwitching, setIsModeSwitching] = useState(false)
+  const [loading, setLoading] = useState(false)
   const { data: servicesData } = useServices()
   const [services, setServices] = useState<Service[]>([])
   const [flash, setFlash] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -196,47 +59,22 @@ export default function ServiceOrdersPage() {
 
   useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 3000); return () => clearTimeout(t) }, [flash])
 
-  // Debounced mode toggle để tránh spam click
-  const [toggleTimeout, setToggleTimeout] = useState<NodeJS.Timeout | null>(null)
-  
-  const handleModeToggle = () => {
-    if (isModeSwitching) return // Prevent spam click during transition
-    
-    if (toggleTimeout) {
-      clearTimeout(toggleTimeout)
+  async function refetchOrders() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/system/orders', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (Array.isArray(data)) setRows(data as DemoServiceOrder[])
+      else if (Array.isArray(data?.items)) setRows(data.items as DemoServiceOrder[])
+      else setRows([])
+    } catch {
+      setRows([])
+    } finally {
+      setLoading(false)
     }
-    
-    const timeout = setTimeout(() => {
-      setIsDemoMode(!isDemoMode)
-      setToggleTimeout(null)
-    }, 100) // 100ms debounce
-    
-    setToggleTimeout(timeout)
   }
-
-  // Sync data dựa trên mode với smooth transition
-  useEffect(() => {
-    setIsModeSwitching(true)
-    
-    // Debug logging
-    console.log('Service Orders Mode switching:', { isDemoMode, servicesData })
-    
-    // Simulate loading delay for smooth transition
-    const timer = setTimeout(() => {
-      if (isDemoMode) {
-        // Demo mode: sử dụng mock data
-        console.log('Using mock data for demo mode')
-        setRows(mockServiceOrders)
-      } else {
-        // Live mode: API chưa implement, hiển thị empty
-        console.log('Live mode - API not implemented, showing empty data')
-        setRows([])
-      }
-      setIsModeSwitching(false)
-    }, 300) // 300ms delay for smooth transition
-    
-    return () => clearTimeout(timer)
-  }, [isDemoMode])
+  useEffect(() => { refetchOrders() }, [])
 
   // Sync with hooks data
   useEffect(() => {
@@ -311,18 +149,19 @@ export default function ServiceOrdersPage() {
       items: edit.items
     }
 
-    if (isDemoMode) {
-      // Demo mode: cập nhật local state
+    try {
       if (edit.id) {
-        setRows(rs => rs.map(r => r.id === edit.id ? payload : r))
-        setFlash({ type: 'success', text: 'Đã cập nhật phiếu dịch vụ (Demo).' })
+        const resp = await fetch('/api/system/orders', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        if (!resp.ok) throw new Error('Cập nhật phiếu dịch vụ thất bại')
+        setFlash({ type: 'success', text: 'Đã cập nhật phiếu dịch vụ.' })
       } else {
-        setRows(rs => [...rs, payload])
-        setFlash({ type: 'success', text: 'Đã tạo phiếu dịch vụ mới (Demo).' })
+        const resp = await fetch('/api/system/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        if (!resp.ok) throw new Error('Tạo phiếu dịch vụ thất bại')
+        setFlash({ type: 'success', text: 'Đã tạo phiếu dịch vụ mới.' })
       }
-    } else {
-      // Live mode: API chưa implement
-      setFlash({ type: 'error', text: 'API phiếu dịch vụ chưa được triển khai. Vui lòng thử lại sau.' })
+      await refetchOrders()
+    } catch (e: any) {
+      setFlash({ type: 'error', text: e.message || 'Có lỗi xảy ra' })
       return
     }
     
@@ -331,17 +170,15 @@ export default function ServiceOrdersPage() {
   function confirmDelete(id: number) { setConfirmOpen({ open: true, id }) }
   async function doDelete() { 
     if (!confirmOpen.id) return
-    
-    if (isDemoMode) {
-      // Demo mode: xóa khỏi local state
-      setRows(rs => rs.filter(r => r.id !== confirmOpen.id))
-      setFlash({ type: 'success', text: 'Đã xóa phiếu dịch vụ (Demo).' })
-    } else {
-      // Live mode: API chưa implement
-      setFlash({ type: 'error', text: 'API phiếu dịch vụ chưa được triển khai. Vui lòng thử lại sau.' })
+    try {
+      const resp = await fetch(`/api/system/orders?id=${confirmOpen.id}`, { method: 'DELETE' })
+      if (!resp.ok) throw new Error('Xóa phiếu dịch vụ thất bại')
+      setFlash({ type: 'success', text: 'Đã xóa phiếu dịch vụ.' })
+      await refetchOrders()
+    } catch (e: any) {
+      setFlash({ type: 'error', text: e.message || 'Có lỗi xảy ra' })
       return
     }
-    
     setConfirmOpen({ open: false })
   }
 
@@ -573,23 +410,7 @@ export default function ServiceOrdersPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Demo Mode Toggle */}
-            <Button 
-              onClick={handleModeToggle}
-              disabled={isModeSwitching}
-              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              } ${isModeSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline ml-1">
-                {isModeSwitching ? 'Đang chuyển...' : (isDemoMode ? 'Demo Mode' : 'Live Mode')}
-              </span>
-            </Button>
+            {/* Removed Demo/Live toggle */}
             
             <Button 
               onClick={openCreate} 
@@ -655,37 +476,7 @@ export default function ServiceOrdersPage() {
             </div>
           )}
 
-          {/* Mode Indicator */}
-          <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm transition-all duration-300 ${
-            isDemoMode 
-              ? 'bg-orange-50 border-orange-200 text-orange-800' 
-              : 'bg-green-50 border-green-200 text-green-800'
-          } ${isModeSwitching ? 'opacity-75' : ''}`}>
-            <div className="flex items-center gap-2">
-              {isModeSwitching ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              )}
-              <span className="font-medium">
-                {isModeSwitching ? 'Đang chuyển đổi...' : (isDemoMode ? 'Chế độ Demo' : 'Chế độ Live')}
-              </span>
-              {!isDemoMode && !isModeSwitching && (
-                <div className="flex items-center gap-1 ml-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-xs text-yellow-600">API chưa triển khai</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* API Not Implemented Notice */}
-          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-            <div className="font-medium">API chưa được triển khai</div>
-            <div className="mt-1">Tính năng quản lý phiếu dịch vụ đang được phát triển. Hiện tại chỉ có thể xem giao diện demo.</div>
-          </div>
+          {/* Removed Demo/Live indicator and API notice */}
 
           {/* Filters */}
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">

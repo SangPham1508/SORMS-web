@@ -28,23 +28,10 @@ export async function GET(request: Request) {
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ error: 'Invalid room status' }, { status: 400 });
       }
-      
-      const backendResponse = await fetch(`http://103.81.87.99:5656/api/rooms/by-status/${status}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': '*/*'
-        }
-      });
-      
-      if (backendResponse.ok) {
-        const data = await backendResponse.json();
-        return NextResponse.json(data.data || []);
-      } else {
-        const errorText = await backendResponse.text();
-        console.error('Backend error:', errorText);
-        return NextResponse.json({ error: `Backend error: ${backendResponse.status}` }, { status: 500 });
-      }
+
+      const resp = await apiClient.getRoomsByStatus(status)
+      if (!resp.success) return NextResponse.json({ error: resp.error || 'Failed to fetch rooms by status' }, { status: 500 })
+      return NextResponse.json(resp.data)
     }
 
     // Get rooms by room type
@@ -54,22 +41,9 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Invalid room type ID' }, { status: 400 });
       }
 
-      const backendResponse = await fetch(`http://103.81.87.99:5656/api/rooms/by-room-type/${typeId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': '*/*'
-        }
-      });
-      
-      if (backendResponse.ok) {
-        const data = await backendResponse.json();
-        return NextResponse.json(data.data || []);
-      } else {
-        const errorText = await backendResponse.text();
-        console.error('Backend error:', errorText);
-        return NextResponse.json({ error: `Backend error: ${backendResponse.status}` }, { status: 500 });
-      }
+      const resp = await apiClient.getRoomsByRoomType(typeId)
+      if (!resp.success) return NextResponse.json({ error: resp.error || 'Failed to fetch rooms by room type' }, { status: 500 })
+      return NextResponse.json(resp.data)
     }
 
     // Get all rooms (default)
@@ -87,34 +61,10 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     console.log('POST /api/system/rooms - Request body:', body);
-    
-    // Call backend directly
-    const backendResponse = await fetch('http://103.81.87.99:5656/api/rooms', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'accept': '*/*'
-      },
-      body: JSON.stringify(body)
-    });
-    
-    console.log('Backend response status:', backendResponse.status);
-    
-    if (backendResponse.ok) {
-      const data = await backendResponse.json();
-      console.log('Backend response data:', data);
-      
-      // Handle backend response format: {responseCode, message, data}
-      if (data.responseCode === 'S0000' || data.responseCode === 'string') {
-        return NextResponse.json(data.data, { status: 201 });
-      } else {
-        return NextResponse.json({ error: data.message || 'Backend error' }, { status: 500 });
-      }
-    } else {
-      const errorText = await backendResponse.text();
-      console.error('Backend error:', errorText);
-      return NextResponse.json({ error: `Backend error: ${backendResponse.status}` }, { status: 500 });
-    }
+
+    const resp = await apiClient.createRoom(body)
+    if (!resp.success) return NextResponse.json({ error: resp.error || 'Failed to create room' }, { status: 500 })
+    return NextResponse.json(resp.data, { status: 201 })
   } catch (error: any) {
     console.error('POST /api/system/rooms - Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

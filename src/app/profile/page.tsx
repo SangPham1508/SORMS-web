@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import { useSession } from "next-auth/react";
 
 type UserProfile = {
   id: number;
@@ -19,11 +20,12 @@ type UserProfile = {
 export default function ProfilePage() {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
   
   // Get back URL - try to get from sessionStorage first, then fallback to role detection
   const getBackUrl = () => {
     // Try to get the previous page from sessionStorage
-    const previousPage = sessionStorage.getItem('previousPage');
+    const previousPage = typeof window !== 'undefined' ? sessionStorage.getItem('previousPage') : null;
     if (previousPage && previousPage !== '/profile') {
       return previousPage;
     }
@@ -45,108 +47,52 @@ export default function ProfilePage() {
     return '/';
   };
 
-  // Detect user role from referrer or sessionStorage
-  const getUserRole = () => {
-    // Try to get from sessionStorage first
-    const previousPage = sessionStorage.getItem('previousPage');
-    if (previousPage) {
-      if (previousPage.startsWith('/admin')) return 'admin';
-      if (previousPage.startsWith('/office')) return 'office';
-      if (previousPage.startsWith('/staff')) return 'staff';
-      if (previousPage.startsWith('/user')) return sessionStorage.getItem('userRole') || 'user';
-    }
-    
-    // Fallback: detect from referrer
-    if (typeof window !== 'undefined') {
-      const referrer = document.referrer;
-      if (referrer) {
-        const url = new URL(referrer);
-        const path = url.pathname;
-        if (path.startsWith('/admin')) return 'admin';
-        if (path.startsWith('/office')) return 'office';
-        if (path.startsWith('/staff')) return 'staff';
-        if (path.startsWith('/user')) return sessionStorage.getItem('userRole') || 'user';
-      }
-    }
-    
-    return 'user';
-  };
-
-  const userRole = getUserRole();
-
-  // Get profile data based on user role
-  const getProfileData = (role: string): UserProfile => {
-    switch (role) {
-      case 'admin':
-        return {
-          id: 1,
-          name: "Nguyễn Văn Admin",
-          email: "admin@sorms.com",
-          phoneNumber: "0901234567",
-          position: "Quản trị viên hệ thống",
-          department: "Công nghệ thông tin",
-          avatar: ''
-        };
-      case 'office':
-        return {
-          id: 2,
-          name: "Trần Thị Office",
-          email: "office@sorms.com",
-          phoneNumber: "0912345678",
-          position: "Nhân viên văn phòng",
-          department: "Quản lý phòng",
-          avatar: ''
-        };
-      case 'lecturer':
-        return {
-          id: 3,
-          name: "Lê Văn Lecturer",
-          email: "lecturer@sorms.com",
-          phoneNumber: "0923456789",
-          position: "Giảng viên",
-          department: "Khoa học máy tính",
-          avatar: ''
-        };
-      case 'staff':
-        return {
-          id: 4,
-          name: "Phạm Thị Staff",
-          email: "staff@sorms.com",
-          phoneNumber: "0934567890",
-          position: "Nhân viên",
-          department: "Hành chính",
-          avatar: ''
-        };
-      case 'guest':
-        return {
-          id: 5,
-          name: "Hoàng Văn Guest",
-          email: "guest@sorms.com",
-          phoneNumber: "0945678901",
-          position: "Khách mời",
-          department: "Khách",
-          avatar: ''
-        };
-      default:
-        return {
-          id: 6,
-          name: "Võ Thị User",
-          email: "user@sorms.com",
-          phoneNumber: "0956789012",
-          position: "Người dùng",
-          department: "Chung",
-          avatar: ''
-        };
-    }
-  };
-
-  const [profile, setProfile] = useState<UserProfile>(getProfileData(userRole));
+  const [profile, setProfile] = useState<UserProfile>({ id: 0, name: '', email: '', phoneNumber: '', position: '', department: '', avatar: '' });
+  const [loading, setLoading] = useState(false);
   const [flash, setFlash] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Update profile when user role changes
+  // Load profile from real API using current session email
   useEffect(() => {
-    setProfile(getProfileData(userRole));
-  }, [userRole]);
+    const load = async () => {
+      const email = session?.user?.email || (typeof window !== 'undefined' ? localStorage.getItem('userEmail') || '' : '');
+      if (!email) return;
+      setLoading(true);
+      try {
+        const res = await fetch('/api/system/users', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+        const data = await res.json();
+        const list = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+        const found = list.find((u: any) => (u.email || '').toLowerCase() === email.toLowerCase());
+        if (found) {
+          setProfile({
+            id: found.id,
+            name: found.full_name || session?.user?.name || email,
+            email: found.email || email,
+            phoneNumber: found.phone_number || '',
+            position: found.position || '',
+            department: found.department || '',
+            avatar: ''
+          });
+        } else {
+          setProfile({
+            id: 0,
+            name: session?.user?.name || email,
+            email,
+            phoneNumber: '',
+            position: '',
+            department: '',
+            avatar: ''
+          });
+        }
+      } catch {
+        // Keep minimal fallback from session
+        const email = session?.user?.email || ''
+        setProfile(p => ({ ...p, name: session?.user?.name || email, email: email }))
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [session]);
 
   // Auto-hide success/error messages after a few seconds
   useEffect(() => {
@@ -261,8 +207,8 @@ export default function ProfilePage() {
           )}
 
           {/* Profile Card */}
-          <Card>
-            <CardHeader>
+          <Card className="bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-lg rounded-2xl">
+            <CardHeader className="border-b border-gray-200/50">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Thông tin cá nhân</h2>
                 <Button onClick={handleEditProfile}>
@@ -279,11 +225,11 @@ export default function ProfilePage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-4xl text-gray-500">👤</span>
+                      <span className="text-4xl text-gray-400">👤</span>
                     )}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">{profile.name}</h3>
-                  <p className="text-sm text-gray-600">{profile.position}</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{loading ? '...' : (profile.name || '—')}</h3>
+                  <p className="text-sm text-gray-600">{profile.position || '—'}</p>
                 </div>
 
                 {/* Profile Information */}
@@ -291,23 +237,23 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-                      <div className="text-sm text-gray-900">{profile.name}</div>
+                      <div className="text-sm text-gray-900">{loading ? '...' : (profile.name || '—')}</div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                      <div className="text-sm text-gray-900">{profile.email}</div>
+                      <div className="text-sm text-gray-900">{profile.email || '—'}</div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-                      <div className="text-sm text-gray-900">{profile.phoneNumber}</div>
+                      <div className="text-sm text-gray-900">{profile.phoneNumber || '—'}</div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Chức vụ</label>
-                      <div className="text-sm text-gray-900">{profile.position}</div>
+                      <div className="text-sm text-gray-900">{profile.position || '—'}</div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phòng ban</label>
-                      <div className="text-sm text-gray-900">{profile.department}</div>
+                      <div className="text-sm text-gray-900">{profile.department || '—'}</div>
                     </div>
                   </div>
                 </div>
@@ -327,7 +273,8 @@ export default function ProfilePage() {
             email: '',
             phoneNumber: '',
             position: '',
-            department: ''
+            department: '',
+            avatar: ''
           });
         }}
         title="Chỉnh sửa thông tin cá nhân"

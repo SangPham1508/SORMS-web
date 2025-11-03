@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
-export default function AuthCallbackPage() {
+function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -22,6 +22,8 @@ export default function AuthCallbackPage() {
     }
 
     if (status === "authenticated" && session?.user?.email) {
+      const userEmail = session?.user?.email || ""
+      const userName = session?.user?.name || ""
       // Tạo user trong database nếu chưa tồn tại
       const createUser = async () => {
         if (!role) {
@@ -37,8 +39,8 @@ export default function AuthCallbackPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              email: session.user.email,
-              full_name: session.user.name || session.user.email,
+              email: userEmail,
+              full_name: userName || userEmail,
               role: role
             })
           });
@@ -61,8 +63,8 @@ export default function AuthCallbackPage() {
           // Lưu role vào localStorage và cookie (chỉ để UI, không dùng cho auth)
           localStorage.setItem("userRole", role);
           localStorage.setItem("isLoggedIn", "true");
-          localStorage.setItem("userEmail", session.user.email);
-          localStorage.setItem("userName", session.user.name || "");
+          localStorage.setItem("userEmail", userEmail);
+          localStorage.setItem("userName", userName || "");
           document.cookie = `role=${role}; path=/; max-age=86400`;
 
           // Redirect dựa trên role
@@ -106,5 +108,13 @@ export default function AuthCallbackPage() {
       </div>
     </div>
   );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-gray-600">Đang tải...</div>}>
+      <AuthCallbackInner />
+    </Suspense>
+  )
 }
 

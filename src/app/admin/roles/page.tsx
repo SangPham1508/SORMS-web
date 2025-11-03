@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -10,61 +10,35 @@ import Input from "@/components/ui/Input";
 
 type Role = { id: number; code: string; name: string; description?: string; isVisible: boolean };
 
-const mock: Role[] = [
-  { id: 1, code: "admin", name: "Admin", description: "System Administrator", isVisible: true },
-  { id: 2, code: "office", name: "Office", description: "Office Staff", isVisible: true },
-  { id: 3, code: "lecture", name: "Lecture", description: "Lecturer", isVisible: false },
-  { id: 4, code: "staff", name: "Staff", description: "Employee", isVisible: true },
-  { id: 5, code: "guest", name: "Guest", description: "Visitor", isVisible: false },
-  { id: 6, code: "manager", name: "Manager", description: "Department Manager", isVisible: true },
-  { id: 7, code: "accountant", name: "Accountant", description: "Finance & Billing", isVisible: true },
-  { id: 8, code: "cleaner", name: "Cleaner", description: "Housekeeping", isVisible: true },
-  { id: 9, code: "technician", name: "Technician", description: "Maintenance Technician", isVisible: true },
-  { id: 10, code: "auditor", name: "Auditor", description: "Internal Audit", isVisible: false },
-  { id: 11, code: "hr", name: "HR", description: "Human Resources", isVisible: true },
-  { id: 12, code: "security", name: "Security", description: "Security Staff", isVisible: true },
-  { id: 13, code: "sales", name: "Sales", description: "Sales & Marketing", isVisible: true },
-  { id: 14, code: "reception", name: "Reception", description: "Front Desk", isVisible: true },
-  { id: 15, code: "it", name: "IT", description: "IT Support", isVisible: true },
-];
-
-export default function RolesPage() {
+function RolesInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<Role[]>(mock);
-  // Demo/Live mode & fetch
-  const [isDemoMode, setIsDemoMode] = useState(true)
-  const [loadingLive, setLoadingLive] = useState(false)
+  const [rows, setRows] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(false)
+
+  async function refetchRoles() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/system/roles', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (Array.isArray(data?.items)) {
+        setRows(data.items)
+      } else if (Array.isArray(data)) {
+        setRows(data)
+      } else {
+        setRows([])
+      }
+    } catch (e) {
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    if (isDemoMode) {
-      setRows(mock)
-      return
-    }
-    let aborted = false
-    const fetchLive = async () => {
-      setLoadingLive(true)
-      setRows([])
-      try {
-        const res = await fetch('/api/system/roles', { headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
-        if (aborted) return
-        if (Array.isArray(data?.items)) {
-          setRows(data.items)
-        } else {
-          setRows([])
-        }
-      } catch (e) {
-        if (aborted) return
-        setRows([])
-      } finally {
-        if (!aborted) setLoadingLive(false)
-      }
-    }
-    fetchLive()
-    return () => { aborted = true }
-  }, [isDemoMode])
+    refetchRoles()
+  }, [])
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -123,19 +97,34 @@ export default function RolesPage() {
   }
 
   // Save new or updated role
-  function save() {
+  async function save() {
     if (!form.code.trim() || !form.name.trim()) {
       setFlash({ type: 'error', text: 'Vui lòng nhập Code và Tên.' });
       return;
     }
-    if (editing) {
-      setRows((rs) => rs.map((r) => (r.id === editing.id ? { ...r, ...form } : r)));
-    } else {
-      const nextId = rows.length ? Math.max(...rows.map((r) => r.id)) + 1 : 1;
-      setRows((rs) => [...rs, { id: nextId, ...form }]);
+    try {
+      if (editing) {
+        const resp = await fetch('/api/system/roles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editing.id, ...form })
+        })
+        if (!resp.ok) throw new Error('Cập nhật vai trò thất bại')
+        setFlash({ type: 'success', text: 'Đã cập nhật vai trò thành công.' });
+      } else {
+        const resp = await fetch('/api/system/roles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form)
+        })
+        if (!resp.ok) throw new Error('Tạo vai trò mới thất bại')
+        setFlash({ type: 'success', text: 'Đã tạo vai trò mới thành công.' });
+      }
+      setOpen(false);
+      await refetchRoles()
+    } catch (e) {
+      setFlash({ type: 'error', text: e instanceof Error ? e.message : 'Có lỗi xảy ra' })
     }
-    setFlash({ type: 'success', text: editing ? 'Đã cập nhật vai trò thành công.' : 'Đã tạo vai trò mới thành công.' });
-    setOpen(false);
   }
 
   // Open modal to confirm deletion
@@ -144,13 +133,31 @@ export default function RolesPage() {
     setOpenDeleteModal(true);
   }
 
-  // Confirm deletion and remove the role
-  function confirmDelete() {
-    if (productToDelete) {
-      setRows(rows.filter((r) => r.id !== productToDelete.id));
-      setFlash({ type: 'success', text: 'Đã xóa vai trò thành công.' });
+  // Confirm deletion via API (soft delete - deactivate)
+  async function confirmDelete() {
+    if (!productToDelete) return
+    try {
+      const resp = await fetch(`/api/system/roles?id=${productToDelete.id}`, { method: 'DELETE' })
+      if (!resp.ok) throw new Error('Vô hiệu hóa vai trò thất bại')
+      setFlash({ type: 'success', text: 'Đã vô hiệu hóa vai trò thành công.' });
+      await refetchRoles()
+    } catch (e) {
+      setFlash({ type: 'error', text: e instanceof Error ? e.message : 'Có lỗi xảy ra' })
+    } finally {
+      setOpenDeleteModal(false);
     }
-    setOpenDeleteModal(false);
+  }
+
+  // Activate role
+  async function activateRole(role: Role) {
+    try {
+      const resp = await fetch(`/api/system/roles?action=activate&id=${role.id}`, { method: 'POST' })
+      if (!resp.ok) throw new Error('Kích hoạt vai trò thất bại')
+      setFlash({ type: 'success', text: 'Đã kích hoạt vai trò thành công.' });
+      await refetchRoles()
+    } catch (e) {
+      setFlash({ type: 'error', text: e instanceof Error ? e.message : 'Có lỗi xảy ra' })
+    }
   }
 
   // Auto-hide success/error messages after a few seconds
@@ -204,21 +211,6 @@ export default function RolesPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              onClick={() => setIsDemoMode(!isDemoMode)}
-              className={`px-3 py-2 text-sm flex-shrink-0 rounded-lg ${
-                isDemoMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline ml-1">
-                {isDemoMode ? 'Demo Mode' : 'Live Mode'}
-              </span>
-            </Button>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm flex-shrink-0 rounded-lg" onClick={openCreate}>
               Tạo vai trò
             </Button>
@@ -252,33 +244,12 @@ export default function RolesPage() {
           </div>
         )}
 
-          {/* Mode Indicator */}
-          <div className={`rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm ${
-            isDemoMode 
-              ? 'bg-orange-50 border-orange-200 text-orange-800' 
-              : 'bg-green-50 border-green-200 text-green-800'
-          }`}>
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-semibold">
-                {isDemoMode ? 'Chế độ Demo' : 'Chế độ Live'}
-              </span>
-              <span className="text-xs opacity-75">
-                {isDemoMode 
-                  ? 'Đang sử dụng dữ liệu ảo để demo' 
-                  : 'Đang kết nối với API thật'
-                }
-              </span>
-              {loadingLive && (
-                <div className="flex items-center gap-1 ml-auto">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                  <span className="text-xs">Đang tải...</span>
-                </div>
-              )}
+          {/* Loading indicator */}
+          {loading && (
+            <div className="rounded-md border p-2 sm:p-3 text-xs sm:text-sm shadow-sm bg-yellow-50 border-yellow-200 text-yellow-800">
+              Đang tải vai trò...
             </div>
-          </div>
+          )}
 
       {/* Filters */}
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 rounded-lg">
@@ -340,6 +311,7 @@ export default function RolesPage() {
                   <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold text-gray-700">Code</th>
                   <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold text-gray-700">Tên</th>
                   <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold text-gray-700">Mô tả</th>
+                  <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold text-gray-700">Trạng thái</th>
                   <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold text-gray-700">Thao tác</th>
                 </tr>
               </thead>
@@ -360,10 +332,25 @@ export default function RolesPage() {
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700">{r.name}</td>
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-500 truncate" title={r.description}>{r.description}</td>
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2">
+                      {r.isVisible ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Hoạt động
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Vô hiệu
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2">
                       <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                         <Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => { setSelected(r); setDetailOpen(true); }}>Xem</Button>
                         <Button className="h-8 px-3 text-xs" onClick={() => openEdit(r)}>Sửa</Button>
-                        <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => handleOpenDelete(r)}>Xóa</Button>
+                        {r.isVisible ? (
+                          <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => handleOpenDelete(r)}>Vô hiệu</Button>
+                        ) : (
+                          <Button className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700" onClick={() => activateRole(r)}>Kích hoạt</Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -397,13 +384,29 @@ export default function RolesPage() {
                     <span className="text-gray-600">Mô tả</span>
                     <span className="font-medium truncate max-w-[60%] text-right" title={r.description}>{r.description || '—'}</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Trạng thái</span>
+                    {r.isVisible ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Hoạt động
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Vô hiệu
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="px-3 py-3 bg-gray-50 border-t border-gray-100">
                   <div className="grid grid-cols-3 gap-2">
                     <Button variant="secondary" className="h-10 text-xs font-medium px-2" onClick={() => { setSelected(r); setDetailOpen(true); }}>Xem</Button>
                     <Button className="h-10 text-xs font-medium px-2" onClick={() => openEdit(r)}>Sửa</Button>
-                    <Button variant="danger" className="h-10 text-xs font-medium px-2" onClick={() => handleOpenDelete(r)}>Xóa</Button>
+                    {r.isVisible ? (
+                      <Button variant="danger" className="h-10 text-xs font-medium px-2" onClick={() => handleOpenDelete(r)}>Vô hiệu</Button>
+                    ) : (
+                      <Button className="h-10 text-xs font-medium px-2 bg-green-600 hover:bg-green-700" onClick={() => activateRole(r)}>Kích hoạt</Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -497,8 +500,10 @@ export default function RolesPage() {
       </Modal>
 
       {/* Confirm Delete Modal */}
-      <Modal open={openDeleteModal} onClose={() => setOpenDeleteModal(false)} title="Xác nhận xóa">
-        <div className="text-sm text-gray-700">Bạn có chắc muốn xóa vai trò này?</div>
+      <Modal open={openDeleteModal} onClose={() => setOpenDeleteModal(false)} title="Xác nhận vô hiệu hóa">
+        <div className="text-sm text-gray-700">
+          Bạn có chắc muốn vô hiệu hóa vai trò này? Vai trò sẽ không bị xóa hoàn toàn và có thể được kích hoạt lại sau.
+        </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button
             variant="secondary"
@@ -510,7 +515,7 @@ export default function RolesPage() {
             variant="danger"
             onClick={confirmDelete}
           >
-            Xóa
+            Vô hiệu hóa
           </Button>
         </div>
       </Modal>
@@ -558,4 +563,12 @@ export default function RolesPage() {
       </div>
     </>
   );
+}
+
+export default function RolesPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-gray-600">Đang tải...</div>}>
+      <RolesInner />
+    </Suspense>
+  )
 }
