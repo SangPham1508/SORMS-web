@@ -28,11 +28,17 @@ async function getUserStatus(email: string): Promise<{ status: 'ACTIVE' | 'INACT
   ];
 
   const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+  // DEV_MODE: Default all new users to ACTIVE for development purposes
   return {
-    status: user?.status || 'INACTIVE',
+    status: user?.status || 'ACTIVE',
     role: user?.role
   };
 }
+
+// Log environment variables for debugging
+console.log('🔐 NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'Loaded' : 'MISSING');
+console.log('🔐 GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'Loaded' : 'MISSING');
+console.log('🔐 GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'Loaded' : 'MISSING');
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -50,13 +56,13 @@ export const authOptions: NextAuthOptions = {
 
       if (!email) {
         console.error('❌ No email provided during sign in');
-        return false;
+        return '/login?error=EmailNotProvided';
       }
 
       // Check if email domain is allowed
       if (!isAllowedDomain(email)) {
         console.error('❌ Email domain not allowed:', email);
-        return false;
+        return `/login?error=InvalidEmailDomain`;
       }
 
       console.log('✅ Sign in allowed for:', email);
@@ -104,3 +110,4 @@ export const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
+
